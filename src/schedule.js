@@ -1,6 +1,7 @@
 // 每日日程、事件佇列、模擬一步
-import {TYPES,REP_MAX,PARK_SLOTS,CONF_FEE,filmAppeal,fmt,rnd} from './config.js';
-import {G,floatTxt,hooks,save} from './state.js';
+import {TYPES,REP_MAX,PARK_SLOTS,CONF_FEE,filmAppeal,rentOf,fmt,rnd} from './config.js';
+import {G,earn,floatTxt,hooks,save} from './state.js';
+import {dailyEvents,eventHandle,isXmas} from './events.js';
 import {route,reach,lobbyX} from './route.js';
 import {trip,stepAgent} from './agents.js';
 import {stepShaft} from './elevator.js';
@@ -13,6 +14,7 @@ export function genDay(d,from){
   let shops=0,foods=0,slots=0,guests=0,dirty=0;
   for(const u of G.S.units){
     const D=TYPES[u.type];
+    if(u.rentLv!==undefined&&rentOf(u).sat&&u.occ)u.sat=Math.max(0,Math.min(100,u.sat+rentOf(u).sat));
     if(u.type==='parking'&&u.on)slots+=PARK_SLOTS;
     if(D.quiet)guests++;
     if(u.type==='housekeeping')u.busy=0;
@@ -30,11 +32,11 @@ export function genDay(d,from){
     else if(u.type==='food'||u.type==='shop')u.present=0;
   }
   if(dirty&&d%3===0)hooks.log(`${dirty} 間酒店房污糟緊，要有清潔房先租得出`,'bad');
-  const ratio=guests?Math.min(1,slots/guests):0;
+  const ratio=guests?Math.min(1,slots/guests):0;G.parkOk=ratio>=1;
   if(ratio)for(const u of G.S.units)if(TYPES[u.type].quiet)u.sat=Math.min(100,u.sat+3*ratio);
   if(foods+shops>0){
     const m=G.S.units.find(u=>u.type==='metro'&&route(u.f+u.h-1,0)),fame=.15+.85*G.S.rep/REP_MAX,extra=m?(wk?4000:6500)*fame:0;
-    const base2=(tenants()*.08+shops*70+foods*80)*(wk?1:1.5)*fame;
+    const base2=(tenants()*.08+shops*70+foods*80)*(wk?1:1.5)*fame*(isXmas(d)?1.5:1);
     const n=Math.min(shops*160+foods*180,Math.round(base2+extra));
     for(let i=0;i<n;i++)ev(base+rnd(660,1200),'visit',m&&Math.random()<extra/(base2+extra)?m.id:0);
   }
@@ -64,7 +66,7 @@ export function handle(e){
     case 'conf':{
       if(!u)return;
       const os=G.S.units.filter(v=>v.type==='office'&&v.occ&&v.present>0&&!v.unreach&&route(v.f,u.f));if(!os.length)return;
-      G.S.money+=CONF_FEE;floatTxt(u.x+8,u.f+1,'+'+fmt(CONF_FEE),'#ffd27a');
+      earn('conf',CONF_FEE);floatTxt(u.x+8,u.f+1,'+'+fmt(CONF_FEE),'#ffd27a');
       for(let i=0;i<8;i++){const o=os[Math.floor(Math.random()*os.length)];if(o.present<=0)continue;o.present--;trip(o.f,o.x+Math.random()*o.w,u.f,u.x+1+Math.random()*(u.w-2),'meet',{uid:o.id,fid:u.id});}
       break;}
     case 'clean':{
@@ -82,18 +84,20 @@ export function handle(e){
     case 'svcOut':{if(!u)return;const lx=lobbyX();if(lx==null)return;trip(u.f,u.x+Math.random()*u.w,0,lx,'vo',{svc:true});break;}
     case 'hotel':{
       if(!u||u.occ||u.dirty||!reach(u))return;
-      if(Math.random()<.3+u.sat/250+G.S.stars*.06){
-        const D=TYPES[u.type];u.occ=true;G.S.money+=D.night;floatTxt(u.x+u.w/2,u.f+1,'+'+fmt(D.night),'#ffd27a');
+      const D=TYPES[u.type],R=rentOf(u);
+      if(Math.random()<(.3+u.sat/250+G.S.stars*.06)*R.occ){
+        const p=D.night*R.mul;u.occ=true;earn('hotel',p);floatTxt(u.x+u.w/2,u.f+1,'+'+fmt(p),'#ffd27a');
         for(let i=0;i<D.pop;i++)addEv(G.S.t+rnd(0,180),'in',u.id);}
       break;}
     case 'hfree':if(u){u.occ=false;u.present=0;u.dirty=true;addEv(G.S.t+rnd(10,60),'clean',u.id);}break;
+    default:eventHandle(e,u);
   }
 }
 
 export function sim(dt){
   G.S.t+=dt;
   const d=Math.floor(G.S.t/1440);
-  if(d!==G.lastDay){G.lastDay=d;G.events=G.events.slice(G.evi);G.evi=0;rollVisitors();if(d%3===0)quarterEnd();genDay(d,G.S.t-dt);save();}
+  if(d!==G.lastDay){G.lastDay=d;G.events=G.events.slice(G.evi);G.evi=0;rollVisitors();if(d%3===0)quarterEnd();genDay(d,G.S.t-dt);dailyEvents(d);save();}
   if(Math.floor(G.S.t/5)!==Math.floor((G.S.t-dt)/5))G.rcache=new Map(); // 候梯人數變咗，路線要重新計
   const h=Math.floor(G.S.t/60);if(h!==G.lastHour){G.lastHour=h;hourTick();}
   while(G.evi<G.events.length&&G.events[G.evi].t<=G.S.t)handle(G.events[G.evi++]);

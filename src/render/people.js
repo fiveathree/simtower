@@ -18,6 +18,6 @@ export function drawAgents(z){
     if(a.state==='ride'||a.dead)continue;
     let f=a.f,x=a.x;if(a.state==='climb'){f=a.cf+(a.to-a.cf)*a.cp;x=a.cx+(a.ex-a.cx)*a.cp;}
     const sx=SX(x*CW),sy=SY(-f*FH)-2.5*z;if(sx<-5||sx>V.VW+5||sy<-10||sy>V.VH+10)continue;
-    const w=a.wait;person(sx,sy,z*.9,a.svc?'#2f6f8f':w<5?'#1d1d22':w<10?'#e2609a':'#d42a2a');
+    const w=a.wait;person(sx,sy,z*.9,a.kind==='vip'?'#e6b422':a.kind==='guard'?'#1c2b6a':a.svc?'#2f6f8f':w<5?'#1d1d22':w<10?'#e2609a':'#d42a2a');
   }
 }

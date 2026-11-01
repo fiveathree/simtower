@@ -1,6 +1,6 @@
 // 轎廂邏輯：每條電梯井一條候梯隊，多個轎廂各自 SCAN，由派車分配呼叫
 import {TYPES,MAX_CARS,CAR_COST} from './config.js';
-import {G} from './state.js';
+import {G,earn} from './state.js';
 import {nextLeg} from './agents.js';
 
 const newCar=(cfg,pos)=>({cfg,pos,dir:0,riders:[],stop:0,moving:false,next:pos,calls:new Set(),prev:new Set(),park:null});
@@ -16,7 +16,7 @@ export function addCar(u){
   const s=G.cars.get(u.id);if(!s)return '搵唔到呢部電梯';
   if(s.cars.length>=MAX_CARS)return `每部電梯最多 ${MAX_CARS} 個轎廂`;
   if(G.S.money<CAR_COST)return '資金不足';
-  G.S.money-=CAR_COST;
+  earn('build',-CAR_COST);
   const cfg={home:s.stops[Math.floor(s.stops.length*s.cars.length/MAX_CARS)]??s.u.f,rush:true};
   u.cars.push(cfg);s.cars.push(newCar(cfg,cfg.home));return null;
 }

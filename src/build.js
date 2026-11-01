@@ -1,6 +1,6 @@
 // 放置規則、承托、拆卸、費用
 import {TYPES,MINF,MAXF,W,SKY_FLOORS,fi,fmt,fname} from './config.js';
-import {G,floatTxt,hooks} from './state.js';
+import {G,earn,floatTxt,hooks} from './state.js';
 import {dirty} from './route.js';
 import {makeShaft,stopsOf} from './elevator.js';
 
@@ -28,7 +28,7 @@ export function checkPlace(type,f,x,h){
 export function place(type,f,x,h,free){
   const err=checkPlace(type,f,x,h);if(err&&!(free&&err==='資金不足'))return err;
   const d=TYPES[type];h=h||d.h||1;
-  if(!free)G.S.money-=costOf(type,h);
+  if(!free)earn('build',-costOf(type,h));
   const u={id:G.S.nextId++,type,f,x,w:d.w,h,occ:!!d.lift||!!d.always||['food','security','stairs'].includes(type),sat:70,present:0};
   if(d.lift)u.cars=[{home:f,rush:true}];
   G.S.units.push(u);mark(u,u.id);if(d.lift)makeShaft(u);dirty();
@@ -43,12 +43,12 @@ export function paint(type,f,x,free){
     if(sky?!SKY_FLOORS.includes(f):f!==0)return sky?'空中大堂只可以起喺 16F、31F、46F':'大堂只可以起喺 1F';
     if(s[x]===2)return 'skip';if(G.occ[fi(f)][x])return '位置已被佔用';
     if(sky&&!s[x]&&!G.S.slab[fi(f-1)][x])return '下面要有樓面承托';
-    if(!free){if(G.S.money<1000)return '資金不足';G.S.money-=1000;}
+    if(!free){if(G.S.money<1000)return '資金不足';earn('build',-1000);}
     s[x]=2;return null;
   }
   if(s[x])return 'skip';
   if(f!==0){const sf=f>0?f-1:f+1;if(!G.S.slab[fi(sf)][x])return f>0?'下面要有樓面承托':'上面要有樓面先可以挖地庫';}
-  if(!free){if(G.S.money<500)return '資金不足';G.S.money-=500;}
+  if(!free){if(G.S.money<500)return '資金不足';earn('build',-500);}
   s[x]=1;return null;
 }
 export function removeUnit(u){

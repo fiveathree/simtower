@@ -5,21 +5,22 @@ import {mark,paint,place} from './build.js';
 import {makeShaft} from './elevator.js';
 import {genDay} from './schedule.js';
 
-export const G={S:null,occ:null,byId:null,cars:null,skyFloors:new Set(),agents:null,events:null,evi:0,adj:null,rcache:null,lobbyCells:null,floats:null,lastDay:0,lastHour:0,hasSlab:null,rampDepth:0,
+export const G={S:null,occ:null,byId:null,cars:null,skyFloors:new Set(),agents:null,events:null,evi:0,adj:null,rcache:null,lobbyCells:null,floats:null,lastDay:0,lastHour:0,hasSlab:null,rampDepth:0,fire:null,bomb:null,
   tool:'inspect',evalView:false,speed:1,sel:null,hover:null,drag:null,hourly:{moveIn:0,sold:0,soldAmt:0}};
 export const cam={x:480,y:-140,z:1};
 export const V={cvs:null,ctx:null,DPR:1,VW:0,VH:0};
-export const hooks={log(){},closeInfo(){},buildTools(){}}; // 由 UI 接駁，等模擬部分唔使掂 DOM
+export const hooks={log(){},closeInfo(){},buildTools(){},alert(){},ask(t,b,btns){btns[0].fn();}}; // 由 UI 接駁，等模擬部分唔使掂 DOM
 
 export const SX=wx=>(wx-cam.x)*cam.z+V.VW/2,SY=wy=>(wy-cam.y)*cam.z+V.VH/2;
+export function earn(cat,n){G.S.money+=n;G.S.led[cat]=(G.S.led[cat]||0)+n;} // 所有收支都經呢度，財務報表先齊
 export function R(x,y,w,h,c){V.ctx.fillStyle=c;V.ctx.fillRect(x,y,w,h);}
 export function clampCam(){cam.z=Math.min(3,Math.max(.3,cam.z));cam.x=Math.min(W*CW+300,Math.max(-300,cam.x));cam.y=Math.min((-MINF+3)*FH,Math.max(-(MAXF+3)*FH,cam.y));}
 export function floatTxt(x,f,txt,col){G.floats.push({x,f,txt,col,t:0});if(G.floats.length>60)G.floats.shift();}
 
-function blank(){return{version:SAVE_VERSION,money:2000000,t:7*60+10,stars:1,units:[],nextId:1,visitors:0,vToday:0,vLog:[],rep:0,slab:Array.from({length:NF},()=>Array(W).fill(0)),tower:false};}
+function blank(){return{version:SAVE_VERSION,money:2000000,t:7*60+10,stars:1,units:[],nextId:1,visitors:0,vToday:0,vLog:[],rep:0,led:{},fin:[],starHold:0,slab:Array.from({length:NF},()=>Array(W).fill(0)),tower:false};}
 export function initRuntime(){
   G.occ=Array.from({length:NF},()=>new Int32Array(W));
-  G.cars=new Map();G.agents=[];G.events=[];G.evi=0;G.floats=[];
+  G.cars=new Map();G.agents=[];G.events=[];G.evi=0;G.floats=[];G.fire=null;G.bomb=null;hooks.alert(null);
   for(const u of G.S.units){mark(u,u.id);if(u.cars)makeShaft(u);}
   dirty();
   G.lastDay=Math.floor(G.S.t/1440);G.lastHour=Math.floor(G.S.t/60);
@@ -32,6 +33,7 @@ const MIGRATIONS={
   1:o=>{delete o.v;return o;}, // v1 用 v 做版本欄位，資料結構不變
   2:o=>{for(const u of o.units)if(u.type==='elevator')u.cars=[{home:u.f,rush:true}];return o;}, // 電梯可以有多個轎廂
   3:o=>{o.visitors=0;o.vToday=0;o.vLog=[];o.rep=0;return o;}, // 人口開始計訪客
+  4:o=>{o.rep??=0;o.led={};o.fin=[];o.starHold=0;return o;}, // 財務報表
 };
 export function migrate(o){
   if(!o||typeof o!=='object')return null;

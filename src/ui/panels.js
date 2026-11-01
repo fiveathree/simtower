@@ -1,9 +1,9 @@
 // 資訊面板、訊息、對話框
-import {TYPES,MAX_CARS,CAR_COST,FILMS,PARK_SLOTS,filmAppeal,HELP_KEY,fname,fmt} from '../config.js';
-import {G,newGame} from '../state.js';
+import {TYPES,MAX_CARS,CAR_COST,FILMS,PARK_SLOTS,LEDGER,RENT,rentOf,tenantName,filmAppeal,HELP_KEY,fname,fmt} from '../config.js';
+import {G,cam,clampCam,newGame} from '../state.js';
 import {removeUnit} from '../build.js';
 import {addCar} from '../elevator.js';
-import {setFilm} from '../economy.js';
+import {setFilm,setRent,reasons} from '../economy.js';
 
 const $=s=>document.querySelector(s);
 export function log(msg,cls){const el=document.createElement('div');el.textContent=msg;if(cls)el.className=cls;const L=$('#log');L.appendChild(el);while(L.children.length>4)L.firstChild.remove();setTimeout(()=>el.remove(),6500);}
@@ -22,6 +22,13 @@ function buildCfg(){
     el.innerHTML=`<div class="films">${FILMS.map((f,i)=>`<button data-film="${i}">${f.name} ${fmt(f.cost)}</button>`).join('')}</div>`;
     el.onchange=null;
     el.onclick=e=>{const i=e.target.dataset.film;if(i==null)return;const err=setFilm(u,+i);if(err)log(err,'bad');else log(`戲院換片：${FILMS[+i].name}`,'good');};
+    return;
+  }
+  if(u&&(TYPES[u.type].rent||TYPES[u.type].night||TYPES[u.type].sale)){
+    const lv=u.rentLv??1;
+    el.innerHTML=`<div class="rentRow"><span>${TYPES[u.type].sale?'售價':'租金'}</span>${RENT.map((r,i)=>`<button data-rent="${i}" aria-pressed="${i===lv}">${r.name}</button>`).join('')}</div>`;
+    el.onchange=null;
+    el.onclick=e=>{const i=e.target.dataset.rent;if(i==null)return;setRent(u,+i);buildCfg();updInfo();};
     return;
   }
   if(!s){el.innerHTML='';return;}
@@ -46,14 +53,15 @@ export function updInfo(){
   if(u.type==='parking')status=u.on?`${PARK_SLOTS} 個車位`:'未連斜路';
   if(u.type==='cinema'){const a=filmAppeal(u,Math.floor(G.S.t/1440));status=u.unreach?'無法到達':u.film?u.film.name:'未揀片';rows.push(['吸引力',u.film?Math.round(a*100)+'%':'—']);}
   if(u.type==='food')status=u.unreach?'無法到達':'營業中';
+  const nm=(u.occ||u.type==='shop')&&tenantName(u);
+  if(nm&&u.occ)rows.push(['租戶',nm]);
   rows.push(['位置',rng],['狀態',status]);
   if(d.lift){const s=G.cars.get(u.id);let w=0,r=0;for(const q of s.q.values())w+=q.length;for(const c of s.cars)r+=c.riders.length;rows.push(['轎廂',`${s.cars.length} / ${MAX_CARS}`],['載客',`${r} / ${s.cap*s.cars.length}`],['候梯人數',w],['維修費',`每季 ${fmt(d.carUpkeep*s.cars.length)}`]);}
   else if(d.pop||['food','shop','conference','cinema'].includes(u.type))rows.push(['而家喺度',u.present+' 人']);
-  if(d.rent)rows.push(['租金',`每季 ${fmt(d.rent)}`]);if(d.sale)rows.push(['售價',fmt(d.sale)]);if(d.night)rows.push(['房租',`每晚 ${fmt(d.night)}`]);if(d.upkeep)rows.push(['開支',`每季 ${fmt(d.upkeep)}`]);
-  if(u.noisy)rows.push(['隔籬','太嘈，評價下跌']);
+  const mul=rentOf(u).mul;if(d.rent)rows.push(['租金',`每季 ${fmt(d.rent*mul)}`]);if(d.sale)rows.push(['售價',fmt(d.sale*mul)]);if(d.night)rows.push(['房租',`每晚 ${fmt(d.night*mul)}`]);if(d.upkeep)rows.push(['開支',`每季 ${fmt(d.upkeep)}`]);
   const hasSat=['office','condo','shop','hotel','suite'].includes(u.type);const s=Math.round(u.sat);
   $('#infoBody').innerHTML=`<h3>${d.name}</h3>${rows.map(r=>`<div class="row"><span>${r[0]}</span><span>${r[1]}</span></div>`).join('')}
-  ${hasSat?`<div class="row"><span>評價</span><span>${s}</span></div><div class="bar"><i style="width:${s}%;background:${s>=60?'#62d38f':s>=30?'#f0c840':'#ff6b5d'}"></i></div>`:''}`;
+  ${hasSat?`<div class="row"><span>評價</span><span>${s}</span></div><div class="bar"><i style="width:${s}%;background:${s>=60?'#62d38f':s>=30?'#f0c840':'#ff6b5d'}"></i></div>${reasons(u).length?`<div class="row"><span>原因</span><span>${reasons(u).join('、')}</span></div>`:''}`:''}`;
 }
 export function showHelp(){
   $('#mcard').innerHTML=`<h2>天際大廈 <span>點樣玩</span></h2>
@@ -63,6 +71,7 @@ export function showHelp(){
    <li>每一層下面要有樓面承托；用「樓面」可以拖曳鋪空地板。</li>
    <li>高樓用<b>快速電梯</b>：喺 16F、31F、46F 起<b>空中大堂</b>，快速電梯只停大堂，再轉普通電梯。用「查看」點電梯可以加轎廂、設待命樓層同繁忙策略。</li>
    <li><b>貨梯</b>專俾酒店清潔同餐廳送貨用，唔會同住客爭電梯。</li>
+   <li>小心<b>火警</b>同<b>炸彈勒索</b>：要有保安室先救得切。<b>VIP</b> 嚟到唔好俾佢等電梯。點單位可以揀租金高中低，同睇評價原因。</li>
    <li>辦公室每季交租、住宅入住即賣出、快餐店靠午餐同訪客、酒店每晚收房租。</li>
    <li>小人顏色：黑＝正常、粉紅＝等得有啲耐、紅＝好嬲。等太耐租戶會喺季尾搬走。按「評價」睇邊度有問題。</li>
    <li>酒店退房後要<b>清潔房</b>執房先租得出。住宅同酒店唔好貼住辦公室或者快餐店，太嘈會扣評價。地庫<b>停車場</b>要用<b>斜路</b>由 B1 連落去。<b>戲院</b>要揀片，舊片冇人睇。</li>
@@ -78,5 +87,33 @@ export function askNew(){
   $('#modal').hidden=false;$('#mNo').onclick=()=>$('#modal').hidden=true;
   $('#mYes').onclick=()=>{$('#modal').hidden=true;newGame();log('新遊戲開始','good');};
 }
-export function initPanels(){$('#helpBtn').onclick=showHelp;$('#newBtn').onclick=askNew;}
+export function initPanels(){$('#helpBtn').onclick=showHelp;$('#newBtn').onclick=askNew;$('#finBtn').onclick=showFinance;}
+// 遊戲內對話框：開住時模擬會暫停
+export function ask(title,body,btns){
+  $('#mcard').innerHTML=`<h2>${title}</h2><p>${body}</p><div class="acts">${btns.map((b,i)=>`<button data-b="${i}"${b.primary?' class="primary"':''}${b.disabled?' disabled':''}>${b.label}</button>`).join('')}</div>`;
+  $('#modal').hidden=false;
+  $('#mcard').querySelectorAll('[data-b]').forEach(el=>el.onclick=()=>{$('#modal').hidden=true;btns[+el.dataset.b].fn();});
+}
+export function alertBar(msg,f,x){
+  const el=$('#alert');el.hidden=!msg;if(!msg)return;
+  el.innerHTML=`<span></span><button>去睇</button>`;el.firstChild.textContent=msg;
+  el.lastChild.onclick=()=>{cam.x=x*8;cam.y=-f*28;cam.z=Math.max(cam.z,1);clampCam();};
+}
+const sumLed=(l,sign)=>Object.values(l).reduce((a,v)=>a+(v*sign>0?v:0),0);
+export function showFinance(){
+  const qs=[...G.S.fin,{y:0,q:0,led:G.S.led,now:true}].slice(-5).filter(x=>!x.now);
+  const max=Math.max(1,...qs.flatMap(q=>[sumLed(q.led,1),-sumLed(q.led,-1)]));
+  const bars=qs.length?qs.map(q=>{const a=sumLed(q.led,1),b=-sumLed(q.led,-1);return `<div class="fq"><div class="fbars"><i class="in" style="height:${a/max*100}%" title="收入 ${fmt(a)}"></i><i class="out" style="height:${b/max*100}%" title="支出 ${fmt(b)}"></i></div><small>${q.y}年Q${q.q}</small></div>`;}).join(''):'<p class="fnone">未夠一季，季尾先有數</p>';
+  const last=G.S.fin[G.S.fin.length-1],cols=[['今季至今',G.S.led],...(last?[[`${last.y}年Q${last.q}`,last.led]]:[])];
+  const keys=Object.keys(LEDGER).filter(k=>cols.some(c=>c[1][k]));
+  const net=l=>Object.values(l).reduce((a,v)=>a+v,0);
+  $('#mcard').innerHTML=`<h2>財務 <span>報表</span></h2>
+  <div class="flegend"><span><i class="in"></i>收入</span><span><i class="out"></i>支出</span></div>
+  <div class="fchart">${bars}</div>
+  <div class="ftable"><table><thead><tr><th></th>${cols.map(c=>`<th>${c[0]}</th>`).join('')}</tr></thead><tbody>
+  ${keys.map(k=>`<tr><td>${LEDGER[k]}</td>${cols.map(c=>`<td>${c[1][k]?fmt(c[1][k]):'—'}</td>`).join('')}</tr>`).join('')}
+  <tr class="ftotal"><td>淨額</td>${cols.map(c=>`<td>${fmt(net(c[1]))}</td>`).join('')}</tr></tbody></table></div>
+  <div class="acts"><button class="primary" id="mOk">關閉</button></div>`;
+  $('#modal').hidden=false;$('#mOk').onclick=()=>{$('#modal').hidden=true;};
+}
 export function firstRunHelp(){let seen=false;try{seen=!!localStorage.getItem(HELP_KEY);}catch(e){}if(!seen)showHelp();}

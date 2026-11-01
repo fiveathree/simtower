@@ -5,7 +5,7 @@ import {sim} from './schedule.js';
 import {render,resize} from './render/world.js';
 import {buildTools,setTool} from './ui/tools.js';
 import {initHud,setSpeed,updHUD} from './ui/hud.js';
-import {log,closeInfo,initPanels,firstRunHelp} from './ui/panels.js';
+import {log,closeInfo,ask,alertBar,initPanels,firstRunHelp} from './ui/panels.js';
 import {initInput} from './ui/input.js';
 
 const $=s=>document.querySelector(s);
@@ -13,7 +13,7 @@ for(const[q,attr,file]of[['meta[property="og:image"]','content','og.png'],['meta
   $(q)?.setAttribute(attr,SITE_URL+file);
 
 V.cvs=$('#cv');V.ctx=V.cvs.getContext('2d');
-Object.assign(hooks,{log,closeInfo,buildTools});
+Object.assign(hooks,{log,closeInfo,buildTools,ask,alert:alertBar});
 initHud();initPanels();initInput();
 resize();window.addEventListener('resize',resize);
 const saved=load();

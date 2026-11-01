@@ -1,8 +1,9 @@
 // 小人行為
 import {TICKET,WALK,rnd} from './config.js';
-import {G,floatTxt} from './state.js';
+import {G,earn,floatTxt} from './state.js';
 import {route,pickLift,nearestStairs} from './route.js';
 import {addEv} from './schedule.js';
+import {guardArrive,vipArrive} from './events.js';
 
 export function trip(f1,x1,f2,x2,kind,data){
   const legs=route(f1,f2,data&&data.svc);if(!legs)return null;
@@ -33,17 +34,19 @@ export function stepAgent(a,dt){
   else if(a.state==='climb'){a.cp+=dt/1.3;if(a.cp>=1){a.f=a.to;a.x=a.ex;a.li++;nextLeg(a);}}
   if(a.age>360&&!a.dead){a.dead=true;const u=G.byId.get(a.uid);if(u)u.sat=Math.max(0,u.sat-6);}
 }
-export function stress(u,w){if(!u)return;if(w<3)u.sat=Math.min(100,u.sat+.8);else u.sat=Math.max(0,u.sat-(w-3)*.6);}
+export function stress(u,w){if(!u)return;u.wAvg=(u.wAvg||0)*.9+w*.1;if(w<3)u.sat=Math.min(100,u.sat+.8);else u.sat=Math.max(0,u.sat-(w-3)*.6);}
 export function arrive(a){
   a.dead=true;
   const u=G.byId.get(a.uid);
   switch(a.kind){
     case 'in':case 'back': if(u){u.present++;stress(u,a.wait);}break;
     case 'out': stress(u,a.wait);break;
-    case 'lunch':{const fd=G.byId.get(a.fid);if(fd){G.S.money+=40;fd.present++;floatTxt(a.x,a.f+1,'+$40','#ffd27a');}stress(u,a.wait);addEv(G.S.t+rnd(22,40),'lunchBack',a.uid,a.fid);break;}
+    case 'lunch':{const fd=G.byId.get(a.fid);if(fd){earn('food',40);fd.present++;floatTxt(a.x,a.f+1,'+$40','#ffd27a');}stress(u,a.wait);addEv(G.S.t+rnd(22,40),'lunchBack',a.uid,a.fid);break;}
     case 'meet':{const c=G.byId.get(a.fid);if(c)c.present++;stress(u,a.wait);addEv(G.S.t+rnd(60,120),'lunchBack',a.uid,a.fid);break;}
     case 'clean':addEv(G.S.t+rnd(15,25),'cleaned',a.tid,a.hk);break;
+    case 'guard':guardArrive(a);break;
+    case 'vip':vipArrive(a);break;
     case 'svc':addEv(G.S.t+rnd(5,15),'svcOut',a.tid);break;
-    case 'visit':{const tg=G.byId.get(a.tid);G.S.vToday++;if(tg){tg.present++;if(tg.type==='food'){G.S.money+=40;floatTxt(a.x,a.f+1,'+$40','#ffd27a');}else if(tg.type==='cinema')G.S.money+=TICKET;stress(tg,a.wait);}addEv(G.S.t+(tg&&tg.type==='cinema'?rnd(100,130):rnd(20,50)),'vout',a.tid,a.mid);break;}
+    case 'visit':{const tg=G.byId.get(a.tid);G.S.vToday++;if(tg){tg.present++;if(tg.type==='food'){earn('food',40);floatTxt(a.x,a.f+1,'+$40','#ffd27a');}else if(tg.type==='cinema')earn('ticket',TICKET);stress(tg,a.wait);}addEv(G.S.t+(tg&&tg.type==='cinema'?rnd(100,130):rnd(20,50)),'vout',a.tid,a.mid);break;}
   }
 }

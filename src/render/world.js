@@ -3,7 +3,7 @@ import {W,CW,FH,MINF,MAXF,fi,fname} from '../config.js';
 import {G,V,R,cam,SX,SY} from '../state.js';
 import {drawUnit} from './units.js';
 import {drawCars,drawAgents} from './people.js';
-import {drawFloats,drawGhost} from './overlay.js';
+import {drawEventFx,drawFloats,drawGhost} from './overlay.js';
 
 export function resize(){const r=V.cvs.parentElement.getBoundingClientRect();V.DPR=Math.min(2,window.devicePixelRatio||1);V.VW=r.width;V.VH=r.height;V.cvs.width=Math.round(V.VW*V.DPR);V.cvs.height=Math.round(V.VH*V.DPR);}
 const SKY=[[0,'#070b1e','#18204a'],[5,'#0d1433','#2e2d5c'],[6.3,'#e98b5f','#6f86c4'],[7.6,'#86bde9','#d4e8f6'],[16.5,'#7ab2e3','#cfe3f2'],[18,'#ee8150','#56669f'],[19.3,'#151d48','#352d5c'],[24,'#070b1e','#18204a']];
@@ -59,6 +59,7 @@ export function render(){
   V.ctx.textAlign='left';
   drawCars(z);
   drawAgents(z);
+  drawEventFx(z);
   drawFloats(z);
   drawGhost(z);
 }

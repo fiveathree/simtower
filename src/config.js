@@ -1,10 +1,20 @@
 // 設施資料、常數同小工具。轉 domain 時改 SITE_URL，同時改 index.html 嘅 og／twitter 網址。
 export const SITE_URL='https://fiveathree.github.io/simtower/';
-export const SAVE_VERSION=4;
+export const SAVE_VERSION=5;
 export const SAVE_KEY='skytower_save',LEGACY_KEY='skytower_v1',HELP_KEY='skytower_v1_help';
 export const CW=8,FH=28,W=120,MINF=-6,MAXF=60,NF=MAXF-MINF+1,WALK=7,ESPD=5,CAP=15;
 export const MPS=[0,10,25,60];
 export const MAX_CARS=8,CAR_COST=20000;
+export const LEDGER={rent:'租金',sale:'住宅售出',food:'餐飲',hotel:'酒店',ticket:'戲院',conf:'會議',ad:'廣告',build:'建築',upkeep:'電梯維修',ops:'設施開支',film:'買片',event:'事件'};
+export const RENT=[{name:'低',mul:.7,occ:1.4,sat:1.5},{name:'中',mul:1,occ:1,sat:0},{name:'高',mul:1.4,occ:.5,sat:-1.5}];
+export const rentOf=u=>RENT[u.rentLv??1];
+export const NAMES={
+ office:['金輝貿易','大發物流','恆昌會計','新星設計','永利保險','宏達工程','天行軟件','富華地產','卓越顧問','明德律師行','盛世廣告','東方船務'],
+ condo:['陳生一家','李太','黃氏夫婦','何小姐','張家','林生','梁太一家','吳伯伯','鄭生夫婦','周小姐','馮家','羅生'],
+ shop:['金鳳茶餐室手信','小王子玩具','時代書局','好運士多','美麗時裝','快捷電器','老友記鐘錶','花花世界'],
+ hotel:['王先生','Ms. Tanaka','Mr. Smith','趙女士','劉先生','Mme. Dubois','孫小姐','Mr. Kim'],
+};
+export const tenantName=u=>{const a=NAMES[TYPES[u.type].night?'hotel':u.type];return a?a[u.id%a.length]:null;};
 export const TOWER_STAR=6; // 5★ 之後嘅 TOWER
 export const REP_MAX=300; // 名氣滿分要約 300 日，即 4× 大約 2 粒鐘
 export const PARK_SLOTS=10,TICKET=300,CONF_FEE=8000,AD_PER_FLOOR=500;
