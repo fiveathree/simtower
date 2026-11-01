@@ -5,7 +5,7 @@ import {mark} from './build.js';
 import {makeShaft} from './elevator.js';
 import {genDay} from './schedule.js';
 
-export const G={slot:1,S:null,occ:null,byId:null,cars:null,skyFloors:new Set(),agents:null,events:null,evi:0,adj:null,rcache:null,lobbyCells:null,floats:null,lastDay:0,lastHour:0,hasSlab:null,rampDepth:0,fire:null,bomb:null,
+export const G={slot:1,S:null,occ:null,tocc:null,byId:null,cars:null,skyFloors:new Set(),agents:null,events:null,evi:0,adj:null,rcache:null,lobbyCells:null,floats:null,lastDay:0,lastHour:0,hasSlab:null,rampDepth:0,fire:null,bomb:null,
   tool:'inspect',evalView:false,speed:1,sel:null,hover:null,drag:null,hourly:{moveIn:0,sold:0,soldAmt:0}};
 export const cam={x:480,y:-140,z:1};
 export const V={cvs:null,ctx:null,DPR:1,VW:0,VH:0};
@@ -19,7 +19,7 @@ export function floatTxt(x,f,txt,col){G.floats.push({x,f,txt,col,t:0});if(G.floa
 
 function blank(){return{version:SAVE_VERSION,site:SITE.id,money:SITE.money,t:7*60+10,stars:1,units:[],nextId:1,visitors:0,vToday:0,vLog:[],rep:0,led:{},fin:[],starHold:0,slab:Array.from({length:NF},()=>Array(W).fill(0)),tower:false};}
 export function initRuntime(){
-  G.occ=Array.from({length:NF},()=>new Int32Array(W));
+  G.occ=Array.from({length:NF},()=>new Int32Array(W));G.tocc=Array.from({length:NF},()=>new Int32Array(W));
   G.cars=new Map();G.agents=[];G.events=[];G.evi=0;G.floats=[];G.fire=null;G.bomb=null;hooks.alert(null);
   for(const u of G.S.units){mark(u,u.id);if(u.cars)makeShaft(u);}
   dirty();
@@ -61,7 +61,7 @@ export function enter(o){setSite(o.site);hooks.siteChanged();G.S=o;initRuntime()
 /* ---------- 新遊戲 ---------- */
 export function newGame(id=SITE.id){
   setSite(id);hooks.siteChanged();
-  G.S=blank();G.occ=Array.from({length:NF},()=>new Int32Array(W));G.cars=new Map();dirty();
+  G.S=blank();G.occ=Array.from({length:NF},()=>new Int32Array(W));G.tocc=Array.from({length:NF},()=>new Int32Array(W));G.cars=new Map();dirty();
   initRuntime();
   frameCam(6);
   hooks.closeInfo();save();hooks.buildTools();

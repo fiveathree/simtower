@@ -2,6 +2,7 @@
 import {W,CW,FH,MINF,MAXF,SITE,fi,fname} from '../config.js';
 import {G,V,R,cam,SX,SY} from '../state.js';
 import {drawUnit} from './units.js';
+import {isTransport} from '../build.js';
 import {drawCars,drawAgents} from './people.js';
 import {drawEventFx,drawFloats,drawGhost} from './overlay.js';
 import {sprite,lobbyTile,lobbyDoor,reception,shell,car} from './art.js';
@@ -179,7 +180,8 @@ export function render(){
   const yMin=cam.y-V.VH/2/z,yMax=cam.y+V.VH/2/z;
   const fLo=Math.max(MINF,Math.floor(-yMax/FH)-1),fHi=Math.min(MAXF,Math.ceil(-yMin/FH));
   for(let f=fLo;f<=fHi;f++)drawFloorRow(f,G.S.slab[fi(f)],SY(-(f+1)*FH),FH*z,z,nf);
-  for(const u of G.S.units){
+  for(const front of [false,true])for(const u of G.S.units){ // 電梯樓梯畫喺單位上面
+    if(isTransport(u.type)!==front)continue;
     if(u.f+u.h-1<fLo||u.f>fHi)continue;
     const X=SX(u.x*CW),Y=SY(-(u.f+u.h)*FH),Wd=u.w*CW*z,Hd=u.h*FH*z;if(X+Wd<0||X>V.VW)continue;
     drawUnit(u,X,Y,Wd,Hd,z,nf>.5);

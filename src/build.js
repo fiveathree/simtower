@@ -4,7 +4,10 @@ import {G,earn,floatTxt,hooks} from './state.js';
 import {dirty} from './route.js';
 import {makeShaft,stopsOf,clampCars} from './elevator.js';
 
-export function mark(u,val){for(let f=u.f;f<u.f+u.h;f++){const o=G.occ[fi(f)],s=G.S.slab[fi(f)];for(let x=u.x;x<u.x+u.w;x++){o[x]=val;if(val&&!s[x])s[x]=1;}}}
+// 電梯同樓梯自成一層，可以穿過單位；只會同其他電梯樓梯撞位
+export const isTransport=t=>!!TYPES[t].lift||t==='stairs';
+const layerOf=t=>isTransport(t)?G.tocc:G.occ;
+export function mark(u,val){for(let f=u.f;f<u.f+u.h;f++){const o=layerOf(u.type)[fi(f)],s=G.S.slab[fi(f)];for(let x=u.x;x<u.x+u.w;x++){o[x]=val;if(val&&!s[x])s[x]=1;}}}
 export function costOf(type,h){const d=TYPES[type];return d.lift?d.cost+d.per*h:d.cost;}
 export function checkPlace(type,f,x,h){
   const d=TYPES[type];h=h||d.h||1;
@@ -19,7 +22,7 @@ export function checkPlace(type,f,x,h){
   if(d.express&&stopsOf(type,f,h).length<2)return '要經過至少兩個大堂或者空中大堂';
   const transport=d.lift||type==='stairs';
   for(let ff=f;ff<f+h;ff++)for(let xx=x;xx<x+d.w;xx++){
-    if(G.occ[fi(ff)][xx])return '位置已被佔用';
+    if(layerOf(type)[fi(ff)][xx])return '位置已被佔用';
     if(!transport&&G.S.slab[fi(ff)][xx]===2)return '大堂位置只可以放電梯或樓梯';
   }
   if(f!==0){const sf=f>0?f-1:f+h>0?0:f+h;for(let xx=x;xx<x+d.w;xx++)if(!G.S.slab[fi(sf)][xx])return f>0?'下面要有樓面承托':'上面要有樓面先可以挖地庫';}
@@ -45,7 +48,7 @@ export function checkResize(u,nf,nh){
   if(d.express&&stopsOf(u.type,nf,nh).length<2)return '要經過至少兩個大堂或者空中大堂';
   for(let f=nf;f<nf+nh;f++){
     if(f>=u.f&&f<u.f+u.h)continue;
-    for(let x=u.x;x<u.x+u.w;x++)if(G.occ[fi(f)][x])return '位置已被佔用';
+    for(let x=u.x;x<u.x+u.w;x++)if(G.tocc[fi(f)][x])return '位置已被佔用';
   }
   if(G.S.money<d.per*Math.max(0,nh-u.h))return '資金不足';
   return null;
@@ -86,7 +89,7 @@ export function removeUnit(u){
 }
 export function bulldozeAt(f,x){
   if(f<MINF||f>MAXF||x<0||x>=W)return;
-  const id=G.occ[fi(f)][x];
+  const id=G.tocc[fi(f)][x]||G.occ[fi(f)][x];
   if(id){const u=G.byId.get(id);removeUnit(u);hooks.log(`拆咗 ${fname(u.f)} ${TYPES[u.type].name}`);return;}
   const s=G.S.slab[fi(f)];if(!s[x])return;
   if(s[x]===2&&f>0){s[x]=1;dirty();return;} // 空中大堂拆返做普通樓面
