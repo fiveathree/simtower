@@ -1,0 +1,765 @@
+<title>天際大廈</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<meta name="description" content="仿 SimTower / Yoot Tower 嘅網頁起樓經營遊戲：起辦公室、住宅、酒店、電梯，將大廈由 1★ 經營到 TOWER 級。">
+<meta property="og:type" content="website">
+<meta property="og:title" content="天際大廈">
+<meta property="og:description" content="起樓、放租、安排電梯，將大廈由 1★ 經營到 TOWER 級。">
+<meta property="og:image" content="og.png">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="og.png">
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%23191d22'/%3E%3Crect x='7' y='5' width='18' height='24' fill='%23353c44'/%3E%3Crect x='14' y='5' width='4' height='24' fill='%23d9dde2'/%3E%3Cg fill='%23ffb23f'%3E%3Crect x='9' y='8' width='3' height='3'/%3E%3Crect x='20' y='8' width='3' height='3'/%3E%3Crect x='9' y='14' width='3' height='3'/%3E%3Crect x='20' y='20' width='3' height='3'/%3E%3C/g%3E%3Crect x='4' y='28' width='24' height='2' fill='%23c8a464'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;700;900&family=Share+Tech+Mono&display=swap">
+<style>
+/* Layout: 電梯控制盤式工具列（左）＋ 全畫面側視大廈畫布；刻意單一深色主題 */
+:root{
+  --bg:#0e1114; --panel:#191d22; --panel2:#23282e; --line:#353c44;
+  --ink:#ebe6dc; --dim:#98a0a9; --led:#ffb23f; --ledbg:#140e05;
+  --brass:#c8a464; --go:#62d38f; --bad:#ff6b5d;
+  --f-ui:"Noto Sans TC","PingFang TC","Microsoft JhengHei",sans-serif;
+  --f-led:"Share Tech Mono",ui-monospace,Menlo,monospace;
+  color-scheme:dark;
+}
+html,body{height:100%}
+body{background:var(--bg);color:var(--ink);font-family:var(--f-ui);overflow:hidden;font-size:13px}
+button{font:inherit;color:inherit}
+#app{height:100%;box-sizing:border-box;display:grid;grid-template-columns:auto 1fr;grid-template-rows:auto 1fr;gap:8px;
+  padding-block:8px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+#top{grid-column:1/-1;display:flex;flex-wrap:wrap;align-items:center;gap:8px 14px;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:6px 10px}
+.brand{display:flex;align-items:baseline;gap:10px}
+.brand b{font-weight:900;font-size:18px;letter-spacing:.06em}
+#stars{color:var(--led);letter-spacing:.12em;font-size:15px}
+.led{display:flex;flex-direction:column;background:var(--ledbg);border:1px solid #3a2a10;border-radius:6px;padding:2px 9px;min-width:92px}
+.led small{font-size:10px;color:#a07a3c;letter-spacing:.12em}
+.led span{font-family:var(--f-led);color:var(--led);font-size:17px;line-height:1.15;font-variant-numeric:tabular-nums;text-shadow:0 0 6px #ffb23f55}
+.led span.neg{color:var(--bad);text-shadow:0 0 6px #ff6b5d55}
+.speed{display:flex;gap:4px}
+.speed button,.menu button{background:var(--panel2);border:1px solid var(--line);border-radius:6px;padding:5px 9px;cursor:pointer;font-size:12px}
+.speed button[aria-pressed=true]{background:var(--brass);color:#1a150a;border-color:var(--brass);font-weight:700}
+.menu button[aria-pressed=true]{border-color:var(--go);color:var(--go)}
+#goal{flex:1 1 200px;min-width:0;color:var(--dim);font-size:12px;line-height:1.35}
+#goal b{color:var(--ink)}
+.menu{display:flex;gap:4px;margin-left:auto}
+button:focus-visible{outline:2px solid var(--led);outline-offset:1px}
+
+#tools{display:flex;flex-direction:column;gap:4px;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:6px;overflow-y:auto;width:132px}
+.tool{display:grid;grid-template-columns:14px 1fr;grid-template-rows:auto auto;column-gap:7px;align-items:center;text-align:left;
+  background:var(--panel2);border:1px solid var(--line);border-radius:7px;padding:5px 7px;cursor:pointer;flex:0 0 auto}
+.tool i{grid-row:1/3;width:14px;height:14px;border-radius:3px;background:var(--sw);box-shadow:inset 0 0 0 1px #0006}
+.tool b{font-weight:700;font-size:13px}
+.tool small{font-family:var(--f-led);color:var(--dim);font-size:11px}
+.tool[aria-pressed=true]{border-color:var(--brass);background:#2e2a20;box-shadow:inset 3px 0 0 var(--brass)}
+.tool.locked{opacity:.45}
+.tool.locked small{color:var(--bad)}
+
+#stage{position:relative;min-width:0;min-height:0;border-radius:10px;overflow:hidden;border:1px solid var(--line);background:#000}
+#cv{position:absolute;inset:0;touch-action:none;display:block;cursor:crosshair}
+#hint{position:absolute;left:10px;top:10px;background:#0d1014cc;border:1px solid var(--line);border-radius:7px;padding:5px 9px;font-size:12px;max-width:min(360px,70%);pointer-events:none}
+#hint b{color:var(--led)}
+#log{position:absolute;left:10px;bottom:10px;display:flex;flex-direction:column;gap:4px;max-width:min(460px,80%);pointer-events:none}
+#log div{background:#0d1014dd;border-left:3px solid var(--dim);border-radius:4px;padding:4px 8px;font-size:12px;animation:pop .25s ease-out}
+#log div.good{border-color:var(--go)} #log div.bad{border-color:var(--bad)} #log div.money{border-color:var(--led)}
+@keyframes pop{from{transform:translateY(6px);opacity:.3}to{transform:none;opacity:1}}
+#info{position:absolute;right:10px;top:10px;width:230px;background:#151920f2;border:1px solid var(--line);border-radius:9px;padding:10px 12px;display:flex;flex-direction:column;gap:6px}
+#info h3{margin:0;font-size:15px;font-weight:900}
+#info .row{display:flex;justify-content:space-between;gap:8px;color:var(--dim)}
+#info .row span:last-child{color:var(--ink);font-variant-numeric:tabular-nums}
+.bar{height:8px;border-radius:4px;background:#2a3036;overflow:hidden}
+.bar i{display:block;height:100%}
+#info .acts{display:flex;gap:6px;margin-top:4px}
+#info .acts button{flex:1;background:var(--panel2);border:1px solid var(--line);border-radius:6px;padding:5px;cursor:pointer}
+#info .acts button.danger{border-color:#6b2f2a;color:var(--bad)}
+
+#modal{position:fixed;inset:0;background:#05070acc;display:grid;place-items:center;z-index:20;padding:16px}
+#modal .card{background:var(--panel);border:1px solid var(--line);border-radius:12px;max-width:560px;width:100%;max-height:100%;overflow:auto;padding:18px 20px;box-sizing:border-box}
+#modal h2{margin:0 0 8px;font-weight:900;font-size:22px;letter-spacing:.04em}
+#modal h2 span{color:var(--led)}
+#modal p,#modal li{line-height:1.6;color:#d6d1c6}
+#modal ul{padding-left:18px;margin:6px 0}
+#modal .acts{display:flex;gap:8px;justify-content:flex-end;margin-top:12px}
+#modal .acts button{background:var(--panel2);border:1px solid var(--line);border-radius:7px;padding:7px 14px;cursor:pointer}
+#modal .acts button.primary{background:var(--brass);color:#1a150a;border-color:var(--brass);font-weight:700}
+kbd{font-family:var(--f-led);background:var(--panel2);border:1px solid var(--line);border-radius:4px;padding:0 4px}
+
+@media (max-width:760px){
+  #app{grid-template-columns:1fr;grid-template-rows:auto 1fr auto;gap:6px}
+  #tools{grid-row:3;flex-direction:row;width:auto;overflow-x:auto;overflow-y:hidden}
+  .tool{width:96px}
+  #goal{display:none}
+  .led{min-width:0;padding:1px 6px}
+  .led span{font-size:14px}
+  .brand b{font-size:15px}
+  #top{gap:6px 8px;padding:5px 8px}
+  .menu{margin-left:0}
+  #info{left:10px;right:10px;width:auto;top:auto;bottom:10px}
+  #hint{display:none}
+}
+@media (prefers-reduced-motion:reduce){#log div{animation:none}}
+</style>
+
+<div id="app">
+  <header id="top">
+    <div class="brand"><b>天際大廈</b><span id="stars" aria-label="星級"></span></div>
+    <div class="led"><small>資金</small><span id="money">$0</span></div>
+    <div class="led"><small>人口</small><span id="pop">0</span></div>
+    <div class="led"><small id="dateL">第1年</small><span id="clock">07:00</span></div>
+    <div class="speed" role="group" aria-label="速度">
+      <button data-s="0" id="sp0">暫停</button><button data-s="1" id="sp1">1×</button><button data-s="2" id="sp2">2×</button><button data-s="3" id="sp3">4×</button>
+    </div>
+    <div id="goal"></div>
+    <div class="menu">
+      <button id="evalBtn" aria-pressed="false">評價</button>
+      <button id="helpBtn">說明</button>
+      <button id="newBtn">新遊戲</button>
+    </div>
+  </header>
+  <nav id="tools" aria-label="建造工具"></nav>
+  <main id="stage">
+    <canvas id="cv"></canvas>
+    <div id="hint"></div>
+    <div id="log" aria-live="polite"></div>
+    <aside id="info" hidden></aside>
+  </main>
+</div>
+<div id="modal" hidden><div class="card" id="mcard"></div></div>
+
+<script>
+(()=>{
+const CW=8,FH=28,W=120,MINF=-6,MAXF=60,NF=MAXF-MINF+1,WALK=7,ESPD=5,CAP=15,KEY='skytower_v1';
+const MPS=[0,10,25,60];
+const fi=f=>f-MINF;
+const rnd=(a,b)=>a+Math.random()*(b-a);
+const fmt=n=>(n<0?'−$':'$')+Math.abs(Math.round(n)).toLocaleString('en-US');
+const fname=f=>f>=0?(f+1)+'F':'B'+(-f);
+const $=s=>document.querySelector(s);
+
+const TYPES={
+ inspect:{name:'查看',tool:true,star:1,desc:'點單位睇詳情；拖曳移動畫面、滾輪縮放'},
+ floor:{name:'樓面',w:1,h:1,cost:500,star:1,paint:true,desc:'空樓面，用嚟承托上一層。可拖曳連續鋪'},
+ lobby:{name:'大堂',w:1,h:1,cost:1000,star:1,paint:true,desc:'只可以起喺 1F，所有人經大堂出入'},
+ office:{name:'辦公室',w:9,h:1,cost:40000,star:1,pop:6,rent:10000,desc:'6 人返工，每季交租 $10,000'},
+ condo:{name:'住宅',w:12,h:1,cost:80000,star:1,pop:3,sale:150000,desc:'有人入住即賣出 $150,000'},
+ food:{name:'快餐店',w:12,h:1,cost:50000,star:1,desc:'午餐同訪客幫襯，每位 $40'},
+ stairs:{name:'樓梯',w:6,h:2,cost:5000,star:1,desc:'連接呢層同上一層，只適合短距離'},
+ elevator:{name:'電梯',w:4,cost:30000,per:4000,star:1,desc:'由一層拖到另一層；每層 +$4,000，最多 30 層'},
+ hotel:{name:'酒店房',w:5,h:1,cost:20000,star:2,pop:2,night:1500,desc:'每晚有客 $1,500'},
+ shop:{name:'商店',w:8,h:1,cost:60000,star:2,rent:12000,desc:'每季交租 $12,000，吸引訪客'},
+ security:{name:'保安室',w:12,h:1,cost:100000,star:2,upkeep:20000,desc:'升 3★ 必需，每季開支 $20,000'},
+ cathedral:{name:'天台教堂',w:24,h:3,cost:3000000,star:4,minF:29,desc:'只可起喺 30F 或以上；建成並夠人口即 TOWER'},
+ bulldoze:{name:'拆卸',tool:true,star:1,desc:'拆走單位或空樓面（無退款）'},
+};
+const ORDER=['inspect','floor','lobby','office','condo','food','stairs','elevator','hotel','shop','security','cathedral','bulldoze'];
+const SW={inspect:'#98a0a9',floor:'#77736a',lobby:'#ece5d6',office:'#9fc4d6',condo:'#e8c99a',food:'#f0a04b',stairs:'#b9ae98',elevator:'#d9dde2',hotel:'#c6a6dd',shop:'#7fcfa0',security:'#6f8fd0',cathedral:'#f2d27a',bulldoze:'#ff6b5d'};
+const REQ={2:{pop:200},3:{pop:600,sec:1},4:{pop:1500,hotel:10},5:{pop:3000,cath:1}};
+
+let S,occ,byId,cars,agents,events,evi,adj,rcache,lobbyCells,floats,lastDay,lastHour,hasSlab;
+let tool='inspect',evalView=false,speed=1,sel=null,hover=null,hourly={moveIn:0,sold:0,soldAmt:0};
+const cam={x:480,y:-140,z:1};
+
+/* ---------- state ---------- */
+function blank(){return{v:1,money:2000000,t:7*60+10,stars:1,units:[],nextId:1,slab:Array.from({length:NF},()=>Array(W).fill(0)),tower:false};}
+function mark(u,val){for(let f=u.f;f<u.f+u.h;f++){const o=occ[fi(f)],s=S.slab[fi(f)];for(let x=u.x;x<u.x+u.w;x++){o[x]=val;if(val&&!s[x])s[x]=1;}}}
+function dirty(){
+  byId=new Map(S.units.map(u=>[u.id,u]));
+  lobbyCells=[];for(let x=0;x<W;x++)if(S.slab[fi(0)][x]===2)lobbyCells.push(x);
+  hasSlab=S.slab.map(r=>r.some(v=>v));
+  adj=Array.from({length:NF},()=>[]);
+  for(const u of S.units){
+    if(u.type==='elevator'){const a0=u.f,a1=u.f+u.h-1;for(let a=a0;a<=a1;a++)for(let b=a0;b<=a1;b++)if(a!==b)adj[fi(a)].push({b,c:3+Math.abs(a-b)*.25,t:'elev'});}
+    else if(u.type==='stairs'){adj[fi(u.f)].push({b:u.f+1,c:2.2,t:'stairs'});adj[fi(u.f+1)].push({b:u.f,c:2.2,t:'stairs'});}
+  }
+  rcache=new Map();
+}
+function initRuntime(){
+  occ=Array.from({length:NF},()=>new Int32Array(W));
+  cars=new Map();agents=[];events=[];evi=0;floats=[];
+  for(const u of S.units){mark(u,u.id);if(u.type==='elevator')makeCar(u);}
+  dirty();
+  lastDay=Math.floor(S.t/1440);lastHour=Math.floor(S.t/60);
+  genDay(lastDay,S.t);
+}
+function makeCar(u){cars.set(u.id,{u,pos:u.f,dir:0,riders:[],stop:0,moving:false,next:u.f,q:new Map()});}
+function save(){try{localStorage.setItem(KEY,JSON.stringify(S));}catch(e){}}
+function load(){try{const s=localStorage.getItem(KEY);if(s){const o=JSON.parse(s);if(o&&o.v===1)return o;}}catch(e){}return null;}
+
+/* ---------- building rules ---------- */
+function costOf(type,h){const d=TYPES[type];return type==='elevator'?d.cost+d.per*h:d.cost;}
+function checkPlace(type,f,x,h){
+  const d=TYPES[type];h=h||d.h||1;
+  if(d.star>S.stars)return `要 ${d.star}★ 先解鎖`;
+  if(x<0||x+d.w>W)return '超出地盤範圍';
+  if(f<MINF||f+h-1>MAXF)return '超出可建高度';
+  if(d.minF&&f<d.minF)return '只可以起喺 30F 或以上';
+  const transport=type==='elevator'||type==='stairs';
+  for(let ff=f;ff<f+h;ff++)for(let xx=x;xx<x+d.w;xx++){
+    if(occ[fi(ff)][xx])return '位置已被佔用';
+    if(!transport&&S.slab[fi(ff)][xx]===2)return '大堂位置只可以放電梯或樓梯';
+  }
+  if(f!==0){const sf=f>0?f-1:f+1;for(let xx=x;xx<x+d.w;xx++)if(!S.slab[fi(sf)][xx])return f>0?'下面要有樓面承托':'上面要有樓面先可以挖地庫';}
+  if(S.money<costOf(type,h))return '資金不足';
+  return null;
+}
+function place(type,f,x,h,free){
+  const err=checkPlace(type,f,x,h);if(err&&!(free&&err==='資金不足'))return err;
+  const d=TYPES[type];h=h||d.h||1;
+  if(!free)S.money-=costOf(type,h);
+  const u={id:S.nextId++,type,f,x,w:d.w,h,occ:['food','security','cathedral','elevator','stairs'].includes(type),sat:70,present:0};
+  S.units.push(u);mark(u,u.id);if(type==='elevator')makeCar(u);dirty();
+  if(!free)floatTxt(x+d.w/2,f+h,'−'+fmt(costOf(type,h)).slice(1),'#ff8a7a');
+  return null;
+}
+function paint(type,f,x,free){
+  if(x<0||x>=W||f<MINF||f>MAXF)return '超出地盤範圍';
+  const s=S.slab[fi(f)];
+  if(type==='lobby'){
+    if(f!==0)return '大堂只可以起喺 1F';
+    if(s[x]===2)return 'skip';if(occ[fi(f)][x])return '位置已被佔用';
+    if(!free){if(S.money<1000)return '資金不足';S.money-=1000;}
+    s[x]=2;return null;
+  }
+  if(s[x])return 'skip';
+  if(f!==0){const sf=f>0?f-1:f+1;if(!S.slab[fi(sf)][x])return f>0?'下面要有樓面承托':'上面要有樓面先可以挖地庫';}
+  if(!free){if(S.money<500)return '資金不足';S.money-=500;}
+  s[x]=1;return null;
+}
+function removeUnit(u){
+  mark(u,0);
+  // keep slabs so floors above stay supported
+  for(let f=u.f;f<u.f+u.h;f++)for(let x=u.x;x<u.x+u.w;x++)S.slab[fi(f)][x]=Math.max(1,S.slab[fi(f)][x]);
+  S.units=S.units.filter(v=>v!==u);
+  if(u.type==='elevator'){const c=cars.get(u.id);if(c){for(const a of c.riders)a.dead=true;for(const q of c.q.values())for(const a of q)a.dead=true;}cars.delete(u.id);}
+  for(const a of agents)if(a.elev===u||a.st===u)a.dead=true;
+  if(sel===u.id)closeInfo();
+  dirty();
+}
+function bulldozeAt(f,x){
+  if(f<MINF||f>MAXF||x<0||x>=W)return;
+  const id=occ[fi(f)][x];
+  if(id){const u=byId.get(id);removeUnit(u);log(`拆咗 ${fname(u.f)} ${TYPES[u.type].name}`);return;}
+  const s=S.slab[fi(f)];if(!s[x])return;
+  const dep=f>=0?f+1:f-1;
+  if(dep>=MINF&&dep<=MAXF&&S.slab[fi(dep)][x]){log('上面仲有嘢承托緊，唔可以拆','bad');return;}
+  s[x]=0;dirty();
+}
+
+/* ---------- routing ---------- */
+function route(f1,f2){
+  if(f1===f2)return[];
+  const k=f1*1000+f2;if(rcache.has(k))return rcache.get(k);
+  const dist=new Array(NF).fill(Infinity),prev=new Array(NF).fill(null),done=new Array(NF).fill(false);
+  dist[fi(f1)]=0;
+  for(;;){
+    let bi=-1,bd=Infinity;for(let i=0;i<NF;i++)if(!done[i]&&dist[i]<bd){bd=dist[i];bi=i;}
+    if(bi<0||bi===fi(f2))break;done[bi]=true;
+    for(const e of adj[bi]){const j=fi(e.b),nd=bd+e.c;if(nd<dist[j]){dist[j]=nd;prev[j]={from:bi+MINF,t:e.t,to:e.b};}}
+  }
+  let res=null;
+  if(dist[fi(f2)]<Infinity){res=[];let cur=f2;while(cur!==f1){const p=prev[fi(cur)];res.unshift({t:p.t,to:p.to});cur=p.from;}}
+  rcache.set(k,res);return res;
+}
+const reach=u=>lobbyCells.length>0&&route(0,u.f)!==null;
+function nearestElev(f,to,x){let b=null,bd=1e9;for(const u of S.units)if(u.type==='elevator'&&u.f<=Math.min(f,to)&&u.f+u.h-1>=Math.max(f,to)){const d=Math.abs(u.x+2-x);if(d<bd){bd=d;b=u;}}return b;}
+function nearestStairs(f,to,x){const lo=Math.min(f,to);let b=null,bd=1e9;for(const u of S.units)if(u.type==='stairs'&&u.f===lo){const d=Math.abs(u.x+3-x);if(d<bd){bd=d;b=u;}}return b;}
+const lobbyX=()=>lobbyCells.length?lobbyCells[Math.floor(Math.random()*lobbyCells.length)]+Math.random():null;
+
+/* ---------- agents ---------- */
+function trip(f1,x1,f2,x2,kind,data){
+  const legs=route(f1,f2);if(!legs)return null;
+  const a=Object.assign({f:f1,x:x1,legs,li:0,finalX:x2,kind,wait:0,age:0,state:'walk',tx:x1},data);
+  agents.push(a);nextLeg(a);return a;
+}
+function nextLeg(a){
+  if(a.li>=a.legs.length){a.state='walk';a.tx=a.finalX;a.after='end';return;}
+  const L=a.legs[a.li];
+  if(L.t==='elev'){
+    const e=nearestElev(a.f,L.to,a.x);if(!e){a.dead=true;return;}
+    a.elev=e;a.to=L.to;a.dir=Math.sign(L.to-a.f);a.state='walk';a.tx=Math.max(0,e.x-.8-Math.random()*3.2);a.after='wait';
+  }else{
+    const s=nearestStairs(a.f,L.to,a.x);if(!s){a.dead=true;return;}
+    a.st=s;a.to=L.to;a.state='walk';a.tx=L.to>a.f?s.x+.5:s.x+s.w-.5;a.after='climb';
+  }
+}
+function stepAgent(a,dt){
+  a.age+=dt;
+  if(a.state==='walk'){
+    const d=a.tx-a.x,s=WALK*dt;
+    if(Math.abs(d)>s){a.x+=Math.sign(d)*s;return;}
+    a.x=a.tx;
+    if(a.after==='wait'){const c=cars.get(a.elev.id);if(!c){a.dead=true;return;}a.state='wait';let q=c.q.get(a.f);if(!q){q=[];c.q.set(a.f,q);}q.push(a);}
+    else if(a.after==='climb'){a.state='climb';a.cp=0;a.cf=a.f;a.cx=a.x;a.ex=a.to>a.f?a.st.x+a.st.w-.5:a.st.x+.5;}
+    else arrive(a);
+  }else if(a.state==='wait'){a.wait+=dt;}
+  else if(a.state==='climb'){a.cp+=dt/1.3;if(a.cp>=1){a.f=a.to;a.x=a.ex;a.li++;nextLeg(a);}}
+  if(a.age>360&&!a.dead){a.dead=true;const u=byId.get(a.uid);if(u)u.sat=Math.max(0,u.sat-6);}
+}
+function stress(u,w){if(!u)return;if(w<3)u.sat=Math.min(100,u.sat+.8);else u.sat=Math.max(0,u.sat-(w-3)*.6);}
+function arrive(a){
+  a.dead=true;
+  const u=byId.get(a.uid);
+  switch(a.kind){
+    case 'in':case 'back': if(u){u.present++;stress(u,a.wait);}break;
+    case 'out': stress(u,a.wait);break;
+    case 'lunch':{const fd=byId.get(a.fid);if(fd){S.money+=40;fd.present++;floatTxt(a.x,a.f+1,'+$40','#ffd27a');}stress(u,a.wait);addEv(S.t+rnd(22,40),'lunchBack',a.uid,a.fid);break;}
+    case 'visit':{const tg=byId.get(a.tid);if(tg){tg.present++;if(tg.type==='food'){S.money+=40;floatTxt(a.x,a.f+1,'+$40','#ffd27a');}stress(tg,a.wait);}addEv(S.t+rnd(20,50),'vout',a.tid);break;}
+  }
+}
+function floatTxt(x,f,txt,col){floats.push({x,f,txt,col,t:0});if(floats.length>60)floats.shift();}
+
+/* ---------- elevators ---------- */
+function hasAhead(c,dir,f){for(const a of c.riders)if((a.to-f)*dir>0)return true;for(const[g,q]of c.q)if(q.length&&(g-f)*dir>0)return true;return false;}
+function nearestDir(c,f){let best=0,bd=1e9;for(const a of c.riders){const d=Math.abs(a.to-f);if(d>0&&d<bd){bd=d;best=Math.sign(a.to-f);}}for(const[g,q]of c.q)if(q.length&&g!==f){const d=Math.abs(g-f);if(d<bd){bd=d;best=Math.sign(g-f);}}return best;}
+function stepCar(c,dt){
+  for(const q of c.q.values())for(let i=q.length-1;i>=0;i--)if(q[i].dead)q.splice(i,1);
+  for(let i=c.riders.length-1;i>=0;i--)if(c.riders[i].dead)c.riders.splice(i,1);
+  if(c.stop>0){c.stop-=dt;return;}
+  if(c.moving){
+    const d=c.next-c.pos,s=ESPD*dt;
+    if(Math.abs(d)>s){c.pos+=Math.sign(d)*s;return;}
+    c.pos=c.next;const f=c.next,q=c.q.get(f)||[];
+    const stop=c.riders.some(a=>a.to===f)||(c.riders.length<CAP&&q.some(a=>a.dir===c.dir))||!hasAhead(c,c.dir,f);
+    if(!stop){c.next=f+c.dir;return;}
+    c.moving=false;
+  }
+  const f=Math.round(c.pos);c.pos=f;let act=false;
+  for(let i=c.riders.length-1;i>=0;i--){const a=c.riders[i];if(a.to===f){c.riders.splice(i,1);a.f=f;a.x=c.u.x+c.u.w/2;a.state='walk';a.li++;nextLeg(a);act=true;}}
+  const q=c.q.get(f)||[];
+  if(c.dir===0||!hasAhead(c,c.dir,f)){
+    if(q.some(a=>a.dir===c.dir)&&c.dir!==0){}
+    else if(q.length&&!c.riders.length)c.dir=q[0].dir;
+    else c.dir=nearestDir(c,f);
+  }
+  if(c.dir!==0)for(let i=0;i<q.length&&c.riders.length<CAP;){const a=q[i];if(a.dir===c.dir){q.splice(i,1);a.state='ride';c.riders.push(a);act=true;}else i++;}
+  if(act){c.stop=.45;return;}
+  if(c.dir!==0&&!hasAhead(c,c.dir,f))c.dir=nearestDir(c,f);
+  if(c.dir!==0){c.moving=true;c.next=f+c.dir;}
+}
+
+/* ---------- schedule ---------- */
+function addEv(t,k,id,id2){const e={t,k,id,id2};let lo=evi,hi=events.length;while(lo<hi){const m=(lo+hi)>>1;if(events[m].t<=t)lo=m+1;else hi=m;}events.splice(lo,0,e);}
+function genDay(d,from){
+  const base=d*1440,wk=d%3!==2;
+  const ev=(t,k,id)=>{if(t>=from)addEv(t,k,id);};
+  let shops=0,foods=0;
+  for(const u of S.units){
+    if(u.type==='food')foods++;
+    if(u.type==='shop'&&u.occ)shops++;
+    if(u.type==='office'&&u.occ){u.present=0;if(wk)for(let i=0;i<6;i++){ev(base+rnd(450,540),'in',u.id);if(Math.random()<.45)ev(base+rnd(715,770),'lunch',u.id);ev(base+rnd(1010,1110),'out',u.id);}}
+    else if(u.type==='condo'&&u.occ){u.present=3;for(let i=0;i<3;i++)if(wk||Math.random()<.5){const o=wk?rnd(420,540):rnd(600,840);ev(base+o,'out',u.id);ev(base+(wk?rnd(1020,1260):o+rnd(120,360)),'in',u.id);}}
+    else if(u.type==='hotel'){if(u.occ){u.present=2;ev(base+rnd(470,560),'out',u.id);ev(base+rnd(470,580),'out',u.id);ev(base+605,'hfree',u.id);}ev(base+1020+rnd(0,30),'hotel',u.id);}
+    else if(u.type==='food'||u.type==='shop')u.present=0;
+  }
+  if(foods+shops>0){
+    const n=Math.min(320,Math.round((pop()*.08+shops*5+foods*8)*(wk?1:1.5)));
+    for(let i=0;i<n;i++)ev(base+rnd(660,1200),'visit',0);
+  }
+}
+function handle(e){
+  const u=byId.get(e.id);
+  switch(e.k){
+    case 'in':{if(!u||!u.occ)return;const lx=lobbyX();if(lx==null)return;if(!trip(0,lx,u.f,u.x+.5+Math.random()*(u.w-1),'in',{uid:u.id}))u.sat=Math.max(0,u.sat-2);break;}
+    case 'out':{if(!u)return;u.present=Math.max(0,u.present-1);const lx=lobbyX();if(lx==null)return;trip(u.f,u.x+Math.random()*u.w,0,lx,'out',{uid:u.id});break;}
+    case 'lunch':{
+      if(!u||!u.occ||u.present<=0)return;
+      const fs=S.units.filter(v=>v.type==='food'&&route(u.f,v.f)).sort((a,b)=>Math.abs(a.f-u.f)-Math.abs(b.f-u.f)).slice(0,3);
+      if(!fs.length)return;const fd=fs[Math.floor(Math.random()*fs.length)];
+      u.present--;trip(u.f,u.x+Math.random()*u.w,fd.f,fd.x+1+Math.random()*(fd.w-2),'lunch',{uid:u.id,fid:fd.id});break;}
+    case 'lunchBack':{const fd=byId.get(e.id2);if(!u)return;if(fd)fd.present=Math.max(0,fd.present-1);
+      const sf=fd?fd.f:0,sx=fd?fd.x+Math.random()*fd.w:(lobbyX()||0);trip(sf,sx,u.f,u.x+Math.random()*u.w,'back',{uid:u.id});break;}
+    case 'visit':{
+      const ts=S.units.filter(v=>(v.type==='food'||(v.type==='shop'&&v.occ))&&!v.unreach);if(!ts.length)return;
+      const tg=ts[Math.floor(Math.random()*ts.length)];const lx=lobbyX();if(lx==null)return;
+      trip(0,lx,tg.f,tg.x+1+Math.random()*(tg.w-2),'visit',{tid:tg.id});break;}
+    case 'vout':{if(!u)return;u.present=Math.max(0,u.present-1);const lx=lobbyX();if(lx==null)return;trip(u.f,u.x+Math.random()*u.w,0,lx,'vo',{});break;}
+    case 'hotel':{
+      if(!u||u.occ||!reach(u))return;
+      if(Math.random()<.3+u.sat/250+S.stars*.06){u.occ=true;S.money+=1500;floatTxt(u.x+2.5,u.f+1,'+$1,500','#ffd27a');
+        addEv(S.t+rnd(0,180),'in',u.id);addEv(S.t+rnd(0,180),'in',u.id);}
+      break;}
+    case 'hfree':if(u){u.occ=false;u.present=0;}break;
+  }
+}
+function pop(){let p=0;for(const u of S.units)if(u.occ&&TYPES[u.type].pop)p+=TYPES[u.type].pop;return p;}
+const count=t=>S.units.filter(u=>u.type===t).length;
+
+function hourTick(){
+  hourly={moveIn:0,sold:0,soldAmt:0};
+  const h=Math.floor(S.t/60)%24,day=h>=8&&h<=20;
+  for(const u of S.units){
+    const t=u.type;
+    if(t==='office'||t==='condo'||t==='shop'){
+      const r=reach(u);u.unreach=!r;
+      if(!u.occ){
+        if(r&&Math.random()<(t==='condo'?.16:.22)*(day?1:.3)){
+          u.occ=true;u.sat=65;
+          if(t==='condo'){S.money+=150000;hourly.sold++;hourly.soldAmt+=150000;u.present=3;floatTxt(u.x+6,u.f+1,'+$150,000','#ffd27a');}
+          else hourly.moveIn++;
+        }
+      }else if(!r)u.sat=Math.max(0,u.sat-4);
+    }else if(t==='hotel'||t==='food')u.unreach=!reach(u);
+  }
+  if(hourly.moveIn||hourly.sold){
+    const parts=[];if(hourly.moveIn)parts.push(`${hourly.moveIn} 間單位有租戶入伙`);if(hourly.sold)parts.push(`${hourly.sold} 個住宅售出 +${fmt(hourly.soldAmt)}`);
+    log(parts.join('，'),hourly.sold?'money':'good');
+  }
+  checkStars();
+}
+function quarterEnd(){
+  let rent=0,up=0,left=0;
+  for(const u of S.units){
+    const d=TYPES[u.type];
+    if(u.occ&&d.rent)rent+=d.rent;
+    if(u.type==='elevator')up+=10000;
+    if(d.upkeep)up+=d.upkeep;
+    if(u.occ&&(u.type==='office'||u.type==='shop')&&u.sat<25){u.occ=false;u.present=0;left++;}
+    if(u.occ&&u.type==='condo'&&u.sat<12){u.occ=false;u.present=0;left++;}
+  }
+  S.money+=rent-up;
+  log(`季度結算：租金 +${fmt(rent)}，維修 −${fmt(up).slice(1)}`,'money');
+  if(left)log(`${left} 個租戶嫌等電梯太耐，搬走咗`,'bad');
+}
+function checkStars(){
+  const nx=S.stars+1,r=REQ[nx];if(!r)return;
+  if(pop()>=r.pop&&(!r.sec||count('security'))&&(!r.hotel||count('hotel')>=r.hotel)&&(!r.cath||count('cathedral'))){
+    S.stars=nx;log(nx===5?'恭喜！大廈評為 TOWER 級':`大廈升到 ${nx}★，解鎖新設施`,'good');buildTools();save();
+  }
+}
+
+/* ---------- sim loop ---------- */
+function sim(dt){
+  S.t+=dt;
+  const d=Math.floor(S.t/1440);
+  if(d!==lastDay){lastDay=d;events=events.slice(evi);evi=0;if(d%3===0)quarterEnd();genDay(d,S.t-dt);save();}
+  const h=Math.floor(S.t/60);if(h!==lastHour){lastHour=h;hourTick();}
+  while(evi<events.length&&events[evi].t<=S.t)handle(events[evi++]);
+  for(const a of agents)if(!a.dead)stepAgent(a,dt);
+  for(const c of cars.values())stepCar(c,dt);
+  if(agents.some(a=>a.dead))agents=agents.filter(a=>!a.dead);
+  for(const f of floats)f.t+=dt;floats=floats.filter(f=>f.t<12);
+}
+
+/* ---------- rendering ---------- */
+const cvs=$('#cv'),ctx=cvs.getContext('2d');let DPR=1,VW=0,VH=0;
+function resize(){const r=cvs.parentElement.getBoundingClientRect();DPR=Math.min(2,window.devicePixelRatio||1);VW=r.width;VH=r.height;cvs.width=Math.round(VW*DPR);cvs.height=Math.round(VH*DPR);}
+const SKY=[[0,'#070b1e','#18204a'],[5,'#0d1433','#2e2d5c'],[6.3,'#e98b5f','#6f86c4'],[7.6,'#86bde9','#d4e8f6'],[16.5,'#7ab2e3','#cfe3f2'],[18,'#ee8150','#56669f'],[19.3,'#151d48','#352d5c'],[24,'#070b1e','#18204a']];
+const hx=c=>[1,3,5].map(i=>parseInt(c.slice(i,i+2),16));
+const lerpC=(a,b,t)=>{const A=hx(a),B=hx(b);return`rgb(${A.map((v,i)=>Math.round(v+(B[i]-v)*t)).join(',')})`;};
+function skyAt(h){for(let i=0;i<SKY.length-1;i++){const[a,t1,b1]=SKY[i],[b,t2,b2]=SKY[i+1];if(h>=a&&h<=b){const t=(h-a)/(b-a);return[lerpC(t1,t2,t),lerpC(b1,b2,t)];}}return[SKY[0][1],SKY[0][2]];}
+const nightF=h=>h<5?1:h<6.5?1-(h-5)/1.5:h<18?0:h<19.5?(h-18)/1.5:1;
+let seed=11;const sr=()=>(seed=(seed*16807)%2147483647)/2147483647;
+const STARS=Array.from({length:90},()=>[sr(),sr(),sr()<.2?2:1]);
+const CITY=[];for(let x=-900;x<W*CW+900;){const w=30+sr()*70,h=40+sr()*260;if(x<-20||x>W*CW+20)CITY.push({x,w,h,win:Array.from({length:Math.floor(h/14)},()=>sr())});x+=w+4+sr()*14;}
+
+function R(x,y,w,h,c){ctx.fillStyle=c;ctx.fillRect(x,y,w,h);}
+function drawUnit(u,X,Y,Wd,Hd,z,night){
+  const fh=FH*z,t=u.type,flY=Y+Hd;
+  const label=(txt,col)=>{if(z<.7)return;ctx.fillStyle=col;ctx.font=`700 ${Math.max(9,9*z)}px "Noto Sans TC",sans-serif`;ctx.textAlign='center';ctx.fillText(txt,X+Wd/2,Y+Hd*.55);ctx.textAlign='left';};
+  const people=(n,col)=>{const m=Math.min(n,12);for(let i=0;i<m;i++){const px=X+(i+.7)*Wd/(m+.6);person(px,flY-2*z,z*.9,col||'#2b2b33');}};
+  switch(t){
+   case 'office':{
+     R(X,Y,Wd,Hd,'#dde6ea');R(X,Y+2*z,Wd,fh*.32,'#c3d3db');
+     for(let i=0;i<3;i++){const dx=X+(i+.18)*Wd/3;R(dx,flY-fh*.32,Wd/3*.62,3*z,'#8a6d4c');R(dx+Wd/3*.18,flY-fh*.32-6*z,5*z,5*z,'#33414d');R(dx+2*z,flY-fh*.32+3*z,2*z,fh*.32-5*z,'#7a5d3c');}
+     if(u.occ)people(u.present);
+     if(!u.occ){R(X,Y,Wd,Hd,'rgba(18,22,28,.6)');label('招租','#ffd27a');}
+     else if(night&&!u.present)R(X,Y,Wd,Hd,'rgba(8,12,28,.35)');
+     break;}
+   case 'condo':{
+     R(X,Y,Wd,Hd,'#f3e4cc');for(let i=0;i<Wd;i+=6*z)R(X+i,Y,2*z,Hd,'#ead5b2');
+     R(X+Wd*.08,flY-9*z,Wd*.3,7*z,'#b5523b');R(X+Wd*.08,flY-12*z,4*z,5*z,'#b5523b');
+     R(X+Wd*.55,flY-7*z,Wd*.3,5*z,'#fdfbf6');R(X+Wd*.55,flY-9*z,6*z,3*z,'#7aa0c8');
+     R(X+Wd*.45,Y+4*z,3*z,4*z,'#ffd36b');
+     if(u.occ)people(u.present,'#3a2a2a');
+     if(!u.occ){R(X,Y,Wd,Hd,'rgba(18,22,28,.6)');label('待售','#ffd27a');}
+     else if(night&&u.present)R(X,Y,Wd,Hd,'rgba(255,200,90,.12)');
+     break;}
+   case 'hotel':{
+     R(X,Y,Wd,Hd,u.occ?'#efe4f4':'#a69fae');
+     R(X+Wd*.15,flY-7*z,Wd*.7,5*z,'#fff');R(X+Wd*.15,flY-9*z,5*z,3*z,'#d8cbe6');R(X+Wd*.15,flY-6*z,Wd*.7,2*z,'#8d6fb3');
+     if(u.occ&&u.present)people(u.present,'#3b2d4a');
+     break;}
+   case 'food':{
+     R(X,Y,Wd,Hd,'#fbe7bd');
+     for(let i=0;i<Wd;i+=6*z)R(X+i,Y,3*z,4*z,(i/(6*z))%2<1?'#d6402e':'#fff4e0');
+     R(X+2*z,flY-10*z,Wd*.22,8*z,'#c0392b');
+     for(let i=0;i<4;i++){const tx=X+Wd*(.35+i*.16);R(tx,flY-8*z,7*z,2*z,'#8a5a2b');R(tx+3*z,flY-6*z,1.2*z,6*z,'#8a5a2b');}
+     people(u.present,'#3a2a20');if(u.unreach)label('無法到達','#c0392b');
+     break;}
+   case 'shop':{
+     R(X,Y,Wd,Hd,'#dcf1e5');
+     for(let i=0;i<3;i++){const sx=X+Wd*(.1+i*.3);R(sx,Y+5*z,Wd*.2,Hd-7*z,'#9bc7ae');for(let j=0;j<3;j++)R(sx+2*z,Y+(8+j*6)*z,Wd*.2-4*z,3*z,['#e05a6d','#4a90d9','#f1c232'][(i+j)%3]);}
+     if(u.occ)people(u.present,'#24402f');
+     if(!u.occ){R(X,Y,Wd,Hd,'rgba(18,22,28,.6)');label('招租','#ffd27a');}
+     break;}
+   case 'security':{
+     R(X,Y,Wd,Hd,'#cfdaf0');R(X+Wd*.1,Y+5*z,Wd*.45,9*z,'#2b3a55');for(let i=0;i<4;i++)R(X+Wd*.12+i*Wd*.11,Y+7*z,Wd*.08,5*z,'#7fd0ff');
+     R(X+Wd*.6,flY-8*z,Wd*.3,3*z,'#46567a');person(X+Wd*.75,flY-2*z,z*.9,'#1c2b4a');label('保安','#1c2b4a');
+     break;}
+   case 'stairs':{
+     R(X,Y,Wd,Hd,'#cbbfa8');ctx.strokeStyle='#5a4e3c';ctx.lineWidth=Math.max(1,1.5*z);ctx.beginPath();
+     const n=10;ctx.moveTo(X,flY);for(let i=0;i<n;i++){const sx=X+Wd*i/n,sy=flY-Hd*(i+1)/n+2*z;ctx.lineTo(sx,sy);ctx.lineTo(X+Wd*(i+1)/n,sy);}ctx.stroke();
+     R(X+Wd*.5,Y+fh-2*z,Wd*.5,2*z,'#4a463f');
+     break;}
+   case 'elevator':{
+     R(X,Y,Wd,Hd,'#2f343a');R(X+Wd*.2,Y,1,Hd,'#55606b');R(X+Wd*.8,Y,1,Hd,'#55606b');
+     ctx.strokeStyle='#7d8791';ctx.lineWidth=1;for(let i=0;i<u.h;i++){ctx.strokeRect(X+1.5,Y+i*fh+fh*.25,Wd-3,fh*.75-2);}
+     break;}
+   case 'cathedral':{
+     R(X,Y,Wd,Hd,'#f6f1e6');
+     const win=(cx,w,h,cols)=>{ctx.beginPath();ctx.moveTo(cx-w/2,flY-4*z);ctx.lineTo(cx-w/2,flY-h+w/2);ctx.quadraticCurveTo(cx-w/2,flY-h,cx,flY-h-w*.4);ctx.quadraticCurveTo(cx+w/2,flY-h,cx+w/2,flY-h+w/2);ctx.lineTo(cx+w/2,flY-4*z);ctx.closePath();
+       const g=ctx.createLinearGradient(0,flY-h,0,flY);cols.forEach((c,i)=>g.addColorStop(i/(cols.length-1),c));ctx.fillStyle=g;ctx.fill();};
+     win(X+Wd*.18,Wd*.1,Hd*.6,['#3f7fd6','#e0453b','#f2c94c']);win(X+Wd*.82,Wd*.1,Hd*.6,['#3f7fd6','#e0453b','#f2c94c']);
+     win(X+Wd*.5,Wd*.16,Hd*.55,['#7b4fd6','#3f7fd6','#2fa36b']);
+     ctx.beginPath();ctx.arc(X+Wd*.5,Y+Hd*.22,Math.min(Wd*.08,Hd*.14),0,7);ctx.fillStyle='#e0453b';ctx.fill();ctx.strokeStyle='#f2c94c';ctx.lineWidth=2*z;ctx.stroke();
+     R(X+Wd*.3,flY-5*z,Wd*.4,3*z,'#b89a6a');
+     break;}
+  }
+  ctx.fillStyle='rgba(0,0,0,.35)';ctx.fillRect(X,Y,Math.max(1,z*.8),Hd);ctx.fillRect(X+Wd-Math.max(1,z*.8),Y,Math.max(1,z*.8),Hd);
+  if(evalView&&['office','condo','shop','hotel'].includes(t)&&(u.occ||u.unreach)){
+    const s=u.unreach?0:u.sat;R(X,Y,Wd,Hd,s>=60?'rgba(60,200,110,.45)':s>=30?'rgba(240,200,60,.5)':'rgba(230,60,50,.55)');
+  }
+  if(z>=1.3&&t!=='elevator'&&t!=='stairs'){ctx.fillStyle='rgba(0,0,0,.45)';ctx.font=`${Math.min(11,7*z)}px "Noto Sans TC",sans-serif`;ctx.fillText(TYPES[t].name,X+3*z,Y+8*z);}
+}
+function person(x,y,s,col){ctx.fillStyle=col;if(s<.55){ctx.fillRect(x-.5,y-5*s,1.4,5*s);return;}ctx.fillRect(x-1.1*s,y-6*s,2.2*s,6*s);ctx.beginPath();ctx.arc(x,y-7.6*s,1.4*s,0,7);ctx.fill();}
+
+function render(){
+  const z=cam.z;ctx.setTransform(DPR,0,0,DPR,0,0);
+  const hr=(S.t%1440)/60,sky=skyAt(hr),nf=nightF(hr);
+  const g=ctx.createLinearGradient(0,0,0,VH);g.addColorStop(0,sky[0]);g.addColorStop(1,sky[1]);ctx.fillStyle=g;ctx.fillRect(0,0,VW,VH);
+  if(nf>0){ctx.fillStyle=`rgba(255,255,255,${.75*nf})`;for(const s of STARS)ctx.fillRect(s[0]*VW,s[1]*VH*.75,s[2],s[2]);}
+  const SX=wx=>(wx-cam.x)*z+VW/2,SY=wy=>(wy-cam.y)*z+VH/2;
+  const gy=SY(0);
+  // skyline
+  ctx.fillStyle=lerpC('#5d6b85','#141a30',nf);
+  for(const b of CITY){const x=SX(b.x),w=b.w*z;if(x+w<0||x>VW)continue;ctx.fillRect(x,gy-b.h*z,w,b.h*z);}
+  if(nf>.3){ctx.fillStyle=`rgba(255,210,120,${.55*nf})`;for(const b of CITY){const x=SX(b.x),w=b.w*z;if(x+w<0||x>VW)continue;b.win.forEach((v,i)=>{if(v>.55)ctx.fillRect(x+w*v*.8,gy-(i*14+10)*z,3*z,3*z);});}}
+  // ground
+  if(gy<VH){const gg=ctx.createLinearGradient(0,gy,0,gy+400*z);gg.addColorStop(0,'#5a4631');gg.addColorStop(1,'#2c2117');ctx.fillStyle=gg;ctx.fillRect(0,gy,VW,VH-gy);R(0,gy,VW,3*z,'#6e6a62');}
+  // lot markers
+  ctx.fillStyle='rgba(255,255,255,.18)';ctx.fillRect(SX(0)-1,gy,2,8*z);ctx.fillRect(SX(W*CW)-1,gy,2,8*z);
+  // visible floors
+  const yMin=cam.y-VH/2/z,yMax=cam.y+VH/2/z;
+  const fLo=Math.max(MINF,Math.floor(-yMax/FH)-1),fHi=Math.min(MAXF,Math.ceil(-yMin/FH));
+  for(let f=fLo;f<=fHi;f++){
+    const s=S.slab[fi(f)],Y=SY(-(f+1)*FH),H=FH*z;
+    for(let x=0;x<W;){const v=s[x];if(!v){x++;continue;}let e=x;while(e<W&&s[e]===v)e++;
+      const X=SX(x*CW),Wd=(e-x)*CW*z;
+      if(X+Wd>=0&&X<=VW){
+        if(v===2){R(X,Y,Wd,H,'#efe9dd');R(X,Y+H*.78,Wd,H*.22,'#d8cdb8');for(let c=x;c<e;c++)if(c%8===0)R(SX(c*CW),Y,3*z,H*.78,'#cbbfa6');
+          if(nf>.3)R(X,Y,Wd,H,'rgba(255,220,150,.08)');}
+        else R(X,Y,Wd,H,f<0?'#5b5751':'#77736a');
+      }
+      x=e;}
+  }
+  for(const u of S.units){
+    if(u.f+u.h-1<fLo||u.f>fHi)continue;
+    const X=SX(u.x*CW),Y=SY(-(u.f+u.h)*FH),Wd=u.w*CW*z,Hd=u.h*FH*z;if(X+Wd<0||X>VW)continue;
+    drawUnit(u,X,Y,Wd,Hd,z,nf>.5);
+    if(sel===u.id){ctx.strokeStyle='#ffb23f';ctx.lineWidth=2;ctx.strokeRect(X+1,Y+1,Wd-2,Hd-2);}
+  }
+  // slab beams + floor labels
+  ctx.font=`${Math.max(9,10*Math.min(z,1.2))}px "Share Tech Mono",monospace`;ctx.textAlign='right';
+  for(let f=fLo;f<=fHi;f++){
+    const s=S.slab[fi(f)],yb=SY(-f*FH);
+    for(let x=0;x<W;){if(!s[x]){x++;continue;}let e=x;while(e<W&&s[e])e++;R(SX(x*CW),yb-2.2*z,(e-x)*CW*z,2.2*z,'#433f39');x=e;}
+    if(hasSlab[fi(f)]&&z>=.45){ctx.fillStyle=nf>.5?'#c8c0b0':'#2c2a26';ctx.fillText(fname(f),SX(0)-6,yb-FH*z*.3);}
+  }
+  ctx.textAlign='left';
+  // elevator cars
+  for(const c of cars.values()){
+    const u=c.u,X=SX(u.x*CW)+1.5,Wd=u.w*CW*z-3,yb=SY(-c.pos*FH);
+    R(X,yb-FH*z*.88,Wd,FH*z*.86,'#d9dde2');R(X,yb-FH*z*.88,Wd,2*z,'#ffb23f');
+    if(c.riders.length&&z>=.7){ctx.fillStyle='#1b1f24';ctx.font=`700 ${Math.max(8,8*z)}px "Share Tech Mono",monospace`;ctx.textAlign='center';ctx.fillText(c.riders.length,X+Wd/2,yb-FH*z*.32);ctx.textAlign='left';}
+  }
+  // agents
+  for(const a of agents){
+    if(a.state==='ride'||a.dead)continue;
+    let f=a.f,x=a.x;if(a.state==='climb'){f=a.cf+(a.to-a.cf)*a.cp;x=a.cx+(a.ex-a.cx)*a.cp;}
+    const sx=SX(x*CW),sy=SY(-f*FH)-2.5*z;if(sx<-5||sx>VW+5||sy<-10||sy>VH+10)continue;
+    const w=a.wait;person(sx,sy,z*.9,w<5?'#1d1d22':w<10?'#e2609a':'#d42a2a');
+  }
+  // floats
+  ctx.font=`700 ${Math.max(10,11*Math.min(z,1.4))}px "Share Tech Mono",monospace`;ctx.textAlign='center';
+  for(const f of floats){ctx.globalAlpha=Math.max(0,1-f.t/12);ctx.fillStyle=f.col;ctx.fillText(f.txt,SX(f.x*CW),SY(-f.f*FH)-f.t*1.6*z);}
+  ctx.globalAlpha=1;ctx.textAlign='left';
+  drawGhost(SX,SY,z);
+}
+function drawGhost(SX,SY,z){
+  const d=TYPES[tool];if(!hover&&!(drag&&drag.mode==='elev'))return;
+  if(d.tool){if(tool==='bulldoze'&&hover){R(SX(hover.cell*CW),SY(-(hover.f+1)*FH),CW*z,FH*z,'rgba(255,107,93,.45)');}return;}
+  let f,x,h,err;
+  if(drag&&drag.mode==='elev'){f=Math.min(drag.f0,drag.f1);h=Math.abs(drag.f1-drag.f0)+1;x=drag.x;err=h<2?'至少跨兩層':h>30?'最多跨 30 層':checkPlace('elevator',f,x,h);}
+  else if(d.paint){f=hover.f;x=hover.cell;h=1;err=null;}
+  else{f=hover.f;x=hover.cell-Math.floor(d.w/2);h=d.h||1;err=checkPlace(tool,f,x,h);}
+  const X=SX(x*CW),Y=SY(-(f+h)*FH),Wd=(d.w||1)*CW*z,Hd=h*FH*z;
+  R(X,Y,Wd,Hd,err?'rgba(255,90,80,.38)':'rgba(120,230,150,.38)');ctx.strokeStyle=err?'#ff6b5d':'#62d38f';ctx.lineWidth=1.5;ctx.strokeRect(X,Y,Wd,Hd);
+  ctx.font=`700 12px "Noto Sans TC",sans-serif`;const txt=err||fmt(tool==='elevator'?costOf('elevator',Math.max(2,h)):d.cost)+(d.paint?' / 格':'');
+  const tw=ctx.measureText(txt).width;R(X,Y-18,tw+10,16,'rgba(10,12,16,.85)');ctx.fillStyle=err?'#ff8a7a':'#ffd27a';ctx.fillText(txt,X+5,Y-6);
+}
+
+/* ---------- input ---------- */
+function toWorld(sx,sy){const wx=(sx-VW/2)/cam.z+cam.x,wy=(sy-VH/2)/cam.z+cam.y;return{f:Math.floor(-wy/FH),cell:Math.floor(wx/CW)};}
+function clampCam(){cam.z=Math.min(3,Math.max(.3,cam.z));cam.x=Math.min(W*CW+300,Math.max(-300,cam.x));cam.y=Math.min((-MINF+3)*FH,Math.max(-(MAXF+3)*FH,cam.y));}
+const pts=new Map();let drag=null;
+cvs.addEventListener('contextmenu',e=>e.preventDefault());
+cvs.addEventListener('pointerdown',e=>{
+  cvs.setPointerCapture(e.pointerId);pts.set(e.pointerId,{x:e.offsetX,y:e.offsetY});
+  if(pts.size===2){const[p,q]=[...pts.values()];drag={mode:'pinch',d:Math.hypot(p.x-q.x,p.y-q.y),z:cam.z};return;}
+  const w=toWorld(e.offsetX,e.offsetY),pan=e.button===1||e.button===2;
+  drag={mode:pan?'pan':'press',sx:e.offsetX,sy:e.offsetY,cx:cam.x,cy:cam.y,moved:false};
+  if(!pan&&TYPES[tool].paint){drag.mode='paint';drag.f=w.f;drag.last=w.cell;doPaint(w.f,w.cell);}
+  else if(!pan&&tool==='elevator'){drag.mode='elev';drag.f0=drag.f1=w.f;drag.x=w.cell-2;}
+});
+cvs.addEventListener('pointermove',e=>{
+  if(e.pointerType==='mouse')hover=toWorld(e.offsetX,e.offsetY);
+  if(!pts.has(e.pointerId))return;pts.set(e.pointerId,{x:e.offsetX,y:e.offsetY});
+  if(!drag)return;
+  if(drag.mode==='pinch'&&pts.size===2){const[p,q]=[...pts.values()];cam.z=drag.z*Math.hypot(p.x-q.x,p.y-q.y)/drag.d;clampCam();return;}
+  const dx=e.offsetX-drag.sx,dy=e.offsetY-drag.sy;if(Math.hypot(dx,dy)>6)drag.moved=true;
+  if(drag.mode==='press'&&drag.moved)drag.mode='pan';
+  if(drag.mode==='pan'){cam.x=drag.cx-dx/cam.z;cam.y=drag.cy-dy/cam.z;clampCam();}
+  else if(drag.mode==='paint'){const w=toWorld(e.offsetX,e.offsetY);const a=Math.min(drag.last,w.cell),b=Math.max(drag.last,w.cell);for(let c=a;c<=b;c++)doPaint(drag.f,c);drag.last=w.cell;}
+  else if(drag.mode==='elev'){drag.f1=toWorld(e.offsetX,e.offsetY).f;}
+});
+function endPtr(e){
+  pts.delete(e.pointerId);if(!drag)return;
+  const w=toWorld(e.offsetX,e.offsetY);
+  if(drag.mode==='press'&&!drag.moved){if(e.pointerType!=='mouse')hover=w;click(w);}
+  else if(drag.mode==='elev'){const f=Math.min(drag.f0,drag.f1),h=Math.abs(drag.f1-drag.f0)+1;
+    if(h<2)log('電梯要由一層拖到另一層（至少跨兩層）','bad');else if(h>30)log('電梯最多跨 30 層','bad');
+    else{const err=place('elevator',f,drag.x,h);if(err)log(err,'bad');else log(`起咗電梯 ${fname(f)}–${fname(f+h-1)}`);}}
+  else if(drag.mode==='paint'&&paintErr){log(paintErr,'bad');}
+  paintErr=null;
+  if(pts.size===0)drag=null;else if(drag.mode==='pinch')drag=null;
+}
+cvs.addEventListener('pointerup',endPtr);cvs.addEventListener('pointercancel',endPtr);
+cvs.addEventListener('pointerleave',e=>{if(e.pointerType==='mouse')hover=null;});
+cvs.addEventListener('wheel',e=>{e.preventDefault();const r=cvs.getBoundingClientRect(),mx=e.clientX-r.left,my=e.clientY-r.top;
+  const wx=(mx-VW/2)/cam.z+cam.x,wy=(my-VH/2)/cam.z+cam.y;cam.z*=Math.exp(-e.deltaY*.0015);clampCam();cam.x=wx-(mx-VW/2)/cam.z;cam.y=wy-(my-VH/2)/cam.z;clampCam();},{passive:false});
+let paintErr=null;
+function doPaint(f,x){const err=paint(tool,f,x);if(err&&err!=='skip')paintErr=err;else if(!err)dirty();}
+function click(w){
+  if(tool==='inspect'){const id=(w.f>=MINF&&w.f<=MAXF&&w.cell>=0&&w.cell<W)?occ[fi(w.f)][w.cell]:0;if(id)openInfo(id);else closeInfo();return;}
+  if(tool==='bulldoze'){bulldozeAt(w.f,w.cell);return;}
+  const d=TYPES[tool];const err=place(tool,w.f,w.cell-Math.floor(d.w/2));
+  if(err)log(err,'bad');else log(`起咗 ${fname(w.f)} ${d.name}`);
+}
+window.addEventListener('keydown',e=>{
+  if(!$('#modal').hidden)return;
+  const k=e.key,step=60/cam.z;
+  if(k==='ArrowLeft'||k==='a')cam.x-=step;else if(k==='ArrowRight'||k==='d')cam.x+=step;
+  else if(k==='ArrowUp'||k==='w')cam.y-=step;else if(k==='ArrowDown'||k==='s')cam.y+=step;
+  else if(k==='+'||k==='=')cam.z*=1.15;else if(k==='-')cam.z/=1.15;
+  else if(k===' '){e.preventDefault();setSpeed(speed?0:1);}
+  else if(k==='Escape'){setTool('inspect');closeInfo();}
+  else return;clampCam();
+});
+
+/* ---------- UI ---------- */
+function buildTools(){
+  const nav=$('#tools');nav.innerHTML='';
+  for(const k of ORDER){const d=TYPES[k],locked=d.star>S.stars;
+    const b=document.createElement('button');b.className='tool'+(locked?' locked':'');b.id='tool-'+k;b.style.setProperty('--sw',SW[k]);
+    b.setAttribute('aria-pressed',tool===k);
+    b.innerHTML=`<i></i><b>${d.name}</b><small>${locked?d.star+'★ 解鎖':d.tool?'—':k==='elevator'?'$30,000+':fmt(d.cost)}</small>`;
+    b.title=d.desc;b.onclick=()=>{if(locked){log(`${d.name}要 ${d.star}★ 先解鎖`,'bad');return;}setTool(k);};
+    nav.appendChild(b);}
+}
+function setTool(k){tool=k;document.querySelectorAll('.tool').forEach(b=>b.setAttribute('aria-pressed',b.id==='tool-'+k));const d=TYPES[k];
+  $('#hint').innerHTML=`<b>${d.name}</b> ${d.desc}`;cvs.style.cursor=k==='inspect'?'grab':'crosshair';}
+function setSpeed(s){speed=s;for(let i=0;i<4;i++)$('#sp'+i).setAttribute('aria-pressed',i===s);}
+document.querySelectorAll('.speed button').forEach(b=>b.onclick=()=>setSpeed(+b.dataset.s));
+$('#evalBtn').onclick=()=>{evalView=!evalView;$('#evalBtn').setAttribute('aria-pressed',evalView);if(evalView)log('評價視圖：綠＝滿意，黃＝一般，紅＝唔滿意（多數因為等電梯太耐）');};
+function log(msg,cls){const el=document.createElement('div');el.textContent=msg;if(cls)el.className=cls;const L=$('#log');L.appendChild(el);while(L.children.length>4)L.firstChild.remove();setTimeout(()=>el.remove(),6500);}
+function openInfo(id){sel=id;$('#info').hidden=false;updInfo();}
+function closeInfo(){sel=null;$('#info').hidden=true;}
+function updInfo(){
+  if(sel==null)return;const u=byId.get(sel);if(!u){closeInfo();return;}
+  const d=TYPES[u.type],rows=[];
+  const rng=u.h>1?`${fname(u.f)}–${fname(u.f+u.h-1)}`:fname(u.f);
+  let status='運作中';
+  if(['office','shop'].includes(u.type))status=u.unreach?'無法到達':u.occ?'已出租':'招租中';
+  if(u.type==='condo')status=u.unreach?'無法到達':u.occ?'已售出':'待售';
+  if(u.type==='hotel')status=u.unreach?'無法到達':u.occ?'今晚有客':'空房';
+  if(u.type==='food')status=u.unreach?'無法到達':'營業中';
+  rows.push(['位置',rng],['狀態',status]);
+  if(u.type==='elevator'){const c=cars.get(u.id);let w=0;for(const q of c.q.values())w+=q.length;rows.push(['載客',`${c.riders.length} / ${CAP}`],['候梯人數',w],['維修費','每季 $10,000']);}
+  else if(d.pop||u.type==='food'||u.type==='shop')rows.push(['而家喺度',u.present+' 人']);
+  if(d.rent)rows.push(['租金',`每季 ${fmt(d.rent)}`]);if(d.sale)rows.push(['售價',fmt(d.sale)]);if(d.night)rows.push(['房租',`每晚 ${fmt(d.night)}`]);if(d.upkeep)rows.push(['開支',`每季 ${fmt(d.upkeep)}`]);
+  const hasSat=['office','condo','shop','hotel'].includes(u.type);const s=Math.round(u.sat);
+  $('#info').innerHTML=`<h3>${d.name}</h3>${rows.map(r=>`<div class="row"><span>${r[0]}</span><span>${r[1]}</span></div>`).join('')}
+  ${hasSat?`<div class="row"><span>評價</span><span>${s}</span></div><div class="bar"><i style="width:${s}%;background:${s>=60?'#62d38f':s>=30?'#f0c840':'#ff6b5d'}"></i></div>`:''}
+  <div class="acts"><button class="danger" id="infoDel">拆卸</button><button id="infoClose">關閉</button></div>`;
+  $('#infoDel').onclick=()=>{removeUnit(u);log(`拆咗 ${fname(u.f)} ${d.name}`);};
+  $('#infoClose').onclick=closeInfo;
+}
+function updHUD(){
+  const m=$('#money');m.textContent=fmt(S.money);m.classList.toggle('neg',S.money<0);
+  $('#pop').textContent=pop().toLocaleString('en-US');
+  $('#stars').textContent=S.stars>=5?'TOWER':'★'.repeat(S.stars)+'☆'.repeat(5-S.stars);
+  const d=Math.floor(S.t/1440),y=Math.floor(d/12)+1,q=Math.floor(d/3)%4+1,mn=Math.floor(S.t%1440),hh=String(Math.floor(mn/60)).padStart(2,'0'),mm=String(mn%60).padStart(2,'0');
+  $('#dateL').textContent=`第${y}年 Q${q} ${d%3===2?'週末':'平日'}`;$('#clock').textContent=`${hh}:${mm}`;
+  const nx=S.stars+1,r=REQ[nx];
+  if(!r)$('#goal').innerHTML='<b>TOWER 級達成</b>，繼續擴建同保持住客滿意';
+  else{const items=[`人口 ${pop()} / ${r.pop}`];if(r.sec)items.push(`保安室 ${count('security')?'✓':'未起'}`);if(r.hotel)items.push(`酒店房 ${count('hotel')} / ${r.hotel}`);if(r.cath)items.push(`天台教堂 ${count('cathedral')?'✓':'未起'}`);
+    $('#goal').innerHTML=`<b>升 ${nx===5?'TOWER':nx+'★'}：</b>${items.join('・')}`;}
+  updInfo();
+}
+
+/* ---------- modal ---------- */
+function showHelp(){
+  $('#mcard').innerHTML=`<h2>天際大廈 <span>點樣玩</span></h2>
+  <p>喺空地起一座摩天大廈：放租辦公室、賣住宅、開酒店，安排好電梯等住客唔使等太耐，將大廈由 1★ 經營到 <b>TOWER</b>。</p>
+  <ul>
+   <li>所有人都由 <b>1F 大堂</b>出入。上層要有<b>電梯</b>（由一層拖到另一層）或<b>樓梯</b>先上得到。</li>
+   <li>每一層下面要有樓面承托；用「樓面」可以拖曳鋪空地板。</li>
+   <li>辦公室每季交租、住宅入住即賣出、快餐店靠午餐同訪客、酒店每晚收房租。</li>
+   <li>小人顏色：黑＝正常、粉紅＝等得有啲耐、紅＝好嬲。等太耐租戶會喺季尾搬走。按「評價」睇邊度有問題。</li>
+   <li>升級條件：2★ 人口 200；3★ 人口 600＋保安室；4★ 人口 1,500＋10 間酒店房；TOWER 人口 3,000＋30F 以上天台教堂。</li>
+  </ul>
+  <p>操作：拖曳移動畫面、滾輪或雙指縮放、右鍵拖曳都可以移動；鍵盤 <kbd>WASD</kbd> 移動、<kbd>空白鍵</kbd> 暫停、<kbd>Esc</kbd> 取消工具。進度會自動儲存喺呢部機。</p>
+  <div class="acts"><button class="primary" id="mOk">開始</button></div>`;
+  $('#modal').hidden=false;$('#mOk').onclick=()=>{$('#modal').hidden=true;try{localStorage.setItem(KEY+'_help','1');}catch(e){}};$('#mOk').focus();
+}
+function askNew(){
+  $('#mcard').innerHTML=`<h2>開新遊戲？</h2><p>目前嘅大廈會被清除，重新由起步樓宇開始。</p>
+  <div class="acts"><button id="mNo">取消</button><button class="primary" id="mYes">開新遊戲</button></div>`;
+  $('#modal').hidden=false;$('#mNo').onclick=()=>$('#modal').hidden=true;
+  $('#mYes').onclick=()=>{$('#modal').hidden=true;newGame();log('新遊戲開始','good');};
+}
+$('#helpBtn').onclick=showHelp;$('#newBtn').onclick=askNew;
+
+/* ---------- new game ---------- */
+function newGame(){
+  S=blank();occ=Array.from({length:NF},()=>new Int32Array(W));cars=new Map();dirty();
+  for(let x=20;x<100;x++)paint('lobby',0,x,true);dirty();
+  place('elevator',0,58,6,true);place('stairs',0,94,2,true);
+  const offX=[22,31,40,49,62,71,80];
+  const layout={1:offX.map(x=>['office',x]),2:offX.map(x=>['office',x]),3:[22,34,46,62,74,86].map(x=>['condo',x]),4:[['food',22],['condo',62],['condo',74]],5:[]};
+  for(let f=1;f<=5;f++){
+    for(const[t,x]of layout[f]){const err=place(t,f,x,null,true);if(!err){const u=S.units[S.units.length-1];
+      if(t==='office')u.occ=f===1||x<45;if(t==='condo')u.occ=f===3&&x<60;}}
+    if(f<5)for(let x=20;x<100;x++)paint('floor',f,x,true);
+    dirty();
+  }
+  initRuntime();
+  cam.x=60*CW;cam.y=-3*FH;cam.z=Math.min(1.8,Math.max(.4,VW/(95*CW)));clampCam();
+  closeInfo();save();buildTools();
+}
+
+/* ---------- boot ---------- */
+resize();window.addEventListener('resize',resize);
+const saved=load();
+if(saved){S=saved;initRuntime();cam.x=60*CW;cam.y=-4*FH;cam.z=Math.min(1.8,Math.max(.4,VW/(95*CW)));clampCam();buildTools();}
+else newGame();
+setTool('inspect');setSpeed(1);updHUD();
+let seen=false;try{seen=!!localStorage.getItem(KEY+'_help');}catch(e){}
+if(!seen)showHelp();
+document.addEventListener('visibilitychange',()=>{if(document.hidden)save();});
+setInterval(updHUD,200);
+let lastTs=performance.now();
+function frame(ts){const dt=Math.min(.1,(ts-lastTs)/1000);lastTs=ts;
+  if(speed>0&&$('#modal').hidden){let gm=dt*MPS[speed];while(gm>0){const d=Math.min(.5,gm);sim(d);gm-=d;}}
+  render();requestAnimationFrame(frame);}
+requestAnimationFrame(frame);
+})();
+</script>
