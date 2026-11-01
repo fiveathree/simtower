@@ -2,10 +2,10 @@
 import {SAVE_VERSION,SAVE_KEY,LEGACY_KEY,NF,W,CW,FH,MINF,MAXF} from './config.js';
 import {dirty} from './route.js';
 import {mark,paint,place} from './build.js';
-import {makeCar} from './elevator.js';
+import {makeShaft} from './elevator.js';
 import {genDay} from './schedule.js';
 
-export const G={S:null,occ:null,byId:null,cars:null,agents:null,events:null,evi:0,adj:null,rcache:null,lobbyCells:null,floats:null,lastDay:0,lastHour:0,hasSlab:null,
+export const G={S:null,occ:null,byId:null,cars:null,skyFloors:new Set(),agents:null,events:null,evi:0,adj:null,rcache:null,lobbyCells:null,floats:null,lastDay:0,lastHour:0,hasSlab:null,
   tool:'inspect',evalView:false,speed:1,sel:null,hover:null,drag:null,hourly:{moveIn:0,sold:0,soldAmt:0}};
 export const cam={x:480,y:-140,z:1};
 export const V={cvs:null,ctx:null,DPR:1,VW:0,VH:0};
@@ -20,7 +20,7 @@ function blank(){return{version:SAVE_VERSION,money:2000000,t:7*60+10,stars:1,uni
 export function initRuntime(){
   G.occ=Array.from({length:NF},()=>new Int32Array(W));
   G.cars=new Map();G.agents=[];G.events=[];G.evi=0;G.floats=[];
-  for(const u of G.S.units){mark(u,u.id);if(u.type==='elevator')makeCar(u);}
+  for(const u of G.S.units){mark(u,u.id);if(u.cars)makeShaft(u);}
   dirty();
   G.lastDay=Math.floor(G.S.t/1440);G.lastHour=Math.floor(G.S.t/60);
   genDay(G.lastDay,G.S.t);
@@ -30,6 +30,7 @@ export function initRuntime(){
 // 每個版本升上下一版嘅步驟；key 係舊版本號
 const MIGRATIONS={
   1:o=>{delete o.v;return o;}, // v1 用 v 做版本欄位，資料結構不變
+  2:o=>{for(const u of o.units)if(u.type==='elevator')u.cars=[{home:u.f,rush:true}];return o;}, // 電梯可以有多個轎廂
 };
 export function migrate(o){
   if(!o||typeof o!=='object')return null;

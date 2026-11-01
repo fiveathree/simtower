@@ -18,11 +18,11 @@ export function drawGhost(z){
   const d=TYPES[G.tool];if(!G.hover&&!(G.drag&&G.drag.mode==='elev'))return;
   if(d.tool){if(G.tool==='bulldoze'&&G.hover){R(SX(G.hover.cell*CW),SY(-(G.hover.f+1)*FH),CW*z,FH*z,'rgba(255,107,93,.45)');}return;}
   let f,x,h,err;
-  if(G.drag&&G.drag.mode==='elev'){f=Math.min(G.drag.f0,G.drag.f1);h=Math.abs(G.drag.f1-G.drag.f0)+1;x=G.drag.x;err=h<2?'至少跨兩層':h>30?'最多跨 30 層':checkPlace('elevator',f,x,h);}
+  if(G.drag&&G.drag.mode==='elev'){f=Math.min(G.drag.f0,G.drag.f1);h=Math.abs(G.drag.f1-G.drag.f0)+1;x=G.drag.x;err=h<2?'至少跨兩層':h>d.maxH?`最多跨 ${d.maxH} 層`:checkPlace(G.tool,f,x,h);}
   else if(d.paint){f=G.hover.f;x=G.hover.cell;h=1;err=null;}
   else{f=G.hover.f;x=G.hover.cell-Math.floor(d.w/2);h=d.h||1;err=checkPlace(G.tool,f,x,h);}
   const X=SX(x*CW),Y=SY(-(f+h)*FH),Wd=(d.w||1)*CW*z,Hd=h*FH*z;
   R(X,Y,Wd,Hd,err?'rgba(255,90,80,.38)':'rgba(120,230,150,.38)');V.ctx.strokeStyle=err?'#ff6b5d':'#62d38f';V.ctx.lineWidth=1.5;V.ctx.strokeRect(X,Y,Wd,Hd);
-  V.ctx.font=`700 12px "Noto Sans TC",sans-serif`;const txt=err||fmt(G.tool==='elevator'?costOf('elevator',Math.max(2,h)):d.cost)+(d.paint?' / 格':'');
+  V.ctx.font=`700 12px "Noto Sans TC",sans-serif`;const txt=err||fmt(d.lift?costOf(G.tool,Math.max(2,h)):d.cost)+(d.paint?' / 格':'');
   const tw=V.ctx.measureText(txt).width;R(X,Y-18,tw+10,16,'rgba(10,12,16,.85)');V.ctx.fillStyle=err?'#ff8a7a':'#ffd27a';V.ctx.fillText(txt,X+5,Y-6);
 }

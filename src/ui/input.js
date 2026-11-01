@@ -28,7 +28,7 @@ cvs.addEventListener('pointerdown',e=>{
   const w=toWorld(e.offsetX,e.offsetY),pan=e.button===1||e.button===2;
   G.drag={mode:pan?'pan':'press',sx:e.offsetX,sy:e.offsetY,cx:cam.x,cy:cam.y,moved:false};
   if(!pan&&TYPES[G.tool].paint){G.drag.mode='paint';G.drag.f=w.f;G.drag.last=w.cell;doPaint(w.f,w.cell);}
-  else if(!pan&&G.tool==='elevator'){G.drag.mode='elev';G.drag.f0=G.drag.f1=w.f;G.drag.x=w.cell-2;}
+  else if(!pan&&TYPES[G.tool].lift){G.drag.mode='elev';G.drag.f0=G.drag.f1=w.f;G.drag.x=w.cell-Math.floor(TYPES[G.tool].w/2);}
 });
 cvs.addEventListener('pointermove',e=>{
   if(e.pointerType==='mouse')G.hover=toWorld(e.offsetX,e.offsetY);
@@ -46,8 +46,9 @@ function endPtr(e){
   const w=toWorld(e.offsetX,e.offsetY);
   if(G.drag.mode==='press'&&!G.drag.moved){if(e.pointerType!=='mouse')G.hover=w;click(w);}
   else if(G.drag.mode==='elev'){const f=Math.min(G.drag.f0,G.drag.f1),h=Math.abs(G.drag.f1-G.drag.f0)+1;
-    if(h<2)log('電梯要由一層拖到另一層（至少跨兩層）','bad');else if(h>30)log('電梯最多跨 30 層','bad');
-    else{const err=place('elevator',f,G.drag.x,h);if(err)log(err,'bad');else log(`起咗電梯 ${fname(f)}–${fname(f+h-1)}`);}}
+    const d=TYPES[G.tool];
+    if(h<2)log(`${d.name}要由一層拖到另一層（至少跨兩層）`,'bad');else if(h>d.maxH)log(`${d.name}最多跨 ${d.maxH} 層`,'bad');
+    else{const err=place(G.tool,f,G.drag.x,h);if(err)log(err,'bad');else log(`起咗${d.name} ${fname(f)}–${fname(f+h-1)}`);}}
   else if(G.drag.mode==='paint'&&paintErr){log(paintErr,'bad');}
   paintErr=null;
   if(pts.size===0)G.drag=null;else if(G.drag.mode==='pinch')G.drag=null;

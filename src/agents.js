@@ -1,11 +1,11 @@
 // 小人行為
 import {WALK,rnd} from './config.js';
 import {G,floatTxt} from './state.js';
-import {route,nearestElev,nearestStairs} from './route.js';
+import {route,pickLift,nearestStairs} from './route.js';
 import {addEv} from './schedule.js';
 
 export function trip(f1,x1,f2,x2,kind,data){
-  const legs=route(f1,f2);if(!legs)return null;
+  const legs=route(f1,f2,data&&data.svc);if(!legs)return null;
   const a=Object.assign({f:f1,x:x1,legs,li:0,finalX:x2,kind,wait:0,age:0,state:'walk',tx:x1},data);
   G.agents.push(a);nextLeg(a);return a;
 }
@@ -13,7 +13,7 @@ export function nextLeg(a){
   if(a.li>=a.legs.length){a.state='walk';a.tx=a.finalX;a.after='end';return;}
   const L=a.legs[a.li];
   if(L.t==='elev'){
-    const e=nearestElev(a.f,L.to,a.x);if(!e){a.dead=true;return;}
+    const e=pickLift(a.f,L.to,a.x,L.id);if(!e){a.dead=true;return;}
     a.elev=e;a.to=L.to;a.dir=Math.sign(L.to-a.f);a.state='walk';a.tx=Math.max(0,e.x-.8-Math.random()*3.2);a.after='wait';
   }else{
     const s=nearestStairs(a.f,L.to,a.x);if(!s){a.dead=true;return;}
@@ -41,6 +41,7 @@ export function arrive(a){
     case 'in':case 'back': if(u){u.present++;stress(u,a.wait);}break;
     case 'out': stress(u,a.wait);break;
     case 'lunch':{const fd=G.byId.get(a.fid);if(fd){G.S.money+=40;fd.present++;floatTxt(a.x,a.f+1,'+$40','#ffd27a');}stress(u,a.wait);addEv(G.S.t+rnd(22,40),'lunchBack',a.uid,a.fid);break;}
+    case 'svc':addEv(G.S.t+rnd(5,15),'svcOut',a.tid);break;
     case 'visit':{const tg=G.byId.get(a.tid);if(tg){tg.present++;if(tg.type==='food'){G.S.money+=40;floatTxt(a.x,a.f+1,'+$40','#ffd27a');}stress(tg,a.wait);}addEv(G.S.t+rnd(20,50),'vout',a.tid);break;}
   }
 }

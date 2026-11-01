@@ -1,6 +1,6 @@
 // 每種設施嘅畫法
 import {TYPES,FH} from '../config.js';
-import {V,R} from '../state.js';
+import {G,V,R} from '../state.js';
 import {person} from './people.js';
 import {evalTint} from './overlay.js';
 
@@ -52,9 +52,9 @@ export function drawUnit(u,X,Y,Wd,Hd,z,night){
      const n=10;V.ctx.moveTo(X,flY);for(let i=0;i<n;i++){const sx=X+Wd*i/n,sy=flY-Hd*(i+1)/n+2*z;V.ctx.lineTo(sx,sy);V.ctx.lineTo(X+Wd*(i+1)/n,sy);}V.ctx.stroke();
      R(X+Wd*.5,Y+fh-2*z,Wd*.5,2*z,'#4a463f');
      break;}
-   case 'elevator':{
-     R(X,Y,Wd,Hd,'#2f343a');R(X+Wd*.2,Y,1,Hd,'#55606b');R(X+Wd*.8,Y,1,Hd,'#55606b');
-     V.ctx.strokeStyle='#7d8791';V.ctx.lineWidth=1;for(let i=0;i<u.h;i++){V.ctx.strokeRect(X+1.5,Y+i*fh+fh*.25,Wd-3,fh*.75-2);}
+   case 'elevator':case 'express':case 'service':{
+     R(X,Y,Wd,Hd,t==='express'?'#27333f':t==='service'?'#26332c':'#2f343a');R(X+Wd*.2,Y,1,Hd,'#55606b');R(X+Wd*.8,Y,1,Hd,'#55606b');
+     V.ctx.strokeStyle='#7d8791';V.ctx.lineWidth=1;for(let i=0;i<u.h;i++){const f=u.f+u.h-1-i;if(t!=='express'||f===0||G.skyFloors.has(f))V.ctx.strokeRect(X+1.5,Y+i*fh+fh*.25,Wd-3,fh*.75-2);}
      break;}
    case 'cathedral':{
      R(X,Y,Wd,Hd,'#f6f1e6');
@@ -68,5 +68,5 @@ export function drawUnit(u,X,Y,Wd,Hd,z,night){
   }
   V.ctx.fillStyle='rgba(0,0,0,.35)';V.ctx.fillRect(X,Y,Math.max(1,z*.8),Hd);V.ctx.fillRect(X+Wd-Math.max(1,z*.8),Y,Math.max(1,z*.8),Hd);
   evalTint(u,X,Y,Wd,Hd);
-  if(z>=1.3&&t!=='elevator'&&t!=='stairs'){V.ctx.fillStyle='rgba(0,0,0,.45)';V.ctx.font=`${Math.min(11,7*z)}px "Noto Sans TC",sans-serif`;V.ctx.fillText(TYPES[t].name,X+3*z,Y+8*z);}
+  if(z>=1.3&&!TYPES[t].lift&&t!=='stairs'){V.ctx.fillStyle='rgba(0,0,0,.45)';V.ctx.font=`${Math.min(11,7*z)}px "Noto Sans TC",sans-serif`;V.ctx.fillText(TYPES[t].name,X+3*z,Y+8*z);}
 }

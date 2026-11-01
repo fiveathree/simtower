@@ -54,6 +54,17 @@ button:focus-visible{outline:2px solid var(--led);outline-offset:1px}
 #info .row span:last-child{color:var(--ink);font-variant-numeric:tabular-nums}
 .bar{height:8px;border-radius:4px;background:#2a3036;overflow:hidden}
 .bar i{display:block;height:100%}
+#info{max-height:calc(100% - 20px);box-sizing:border-box;overflow-y:auto}
+#infoBody{display:flex;flex-direction:column;gap:6px}
+.carList{display:flex;flex-direction:column;gap:4px;max-height:180px;overflow-y:auto}
+.car{display:grid;grid-template-columns:14px 1fr auto;gap:6px;align-items:center}
+.car b{font-family:var(--f-led);color:var(--led)}
+.car label{display:flex;gap:6px;align-items:center;color:var(--dim)}
+.car select{flex:1;min-width:0;background:var(--panel2);color:var(--ink);border:1px solid var(--line);border-radius:6px;padding:3px;font:inherit}
+#infoCfg button{background:var(--panel2);border:1px solid var(--line);border-radius:6px;padding:4px 7px;cursor:pointer}
+#infoCfg button[aria-pressed=true]{border-color:var(--go);color:var(--go)}
+#infoCfg button:disabled{opacity:.45;cursor:default}
+#addCar{width:100%;margin-top:6px}
 #info .acts{display:flex;gap:6px;margin-top:4px}
 #info .acts button{flex:1;background:var(--panel2);border:1px solid var(--line);border-radius:6px;padding:5px;cursor:pointer}
 #info .acts button.danger{border-color:#6b2f2a;color:var(--bad)}
@@ -70,7 +81,7 @@ button:focus-visible{outline:2px solid var(--led);outline-offset:1px}
 kbd{font-family:var(--f-led);background:var(--panel2);border:1px solid var(--line);border-radius:4px;padding:0 4px}
 
 @media (max-width:760px),(pointer:coarse){
-  button{min-height:40px}
+  button,select{min-height:40px}
 }
 @media (max-width:760px){
   #app{grid-template-columns:minmax(0,1fr);grid-template-rows:auto minmax(0,1fr) auto;gap:6px}
@@ -84,5 +95,11 @@ kbd{font-family:var(--f-led);background:var(--panel2);border:1px solid var(--lin
   .menu{margin-left:0}
   #info{left:10px;right:10px;width:auto;top:auto;bottom:10px}
   #hint{display:none}
+}
+@media (min-width:761px) and (max-height:860px){
+  #tools{gap:3px;padding:4px}
+  .tool{padding:4px 7px}
+  .tool b{font-size:12px;line-height:1.15}
+  .tool small{font-size:10px;line-height:1.1}
 }
 @media (prefers-reduced-motion:reduce){#log div{animation:none}}

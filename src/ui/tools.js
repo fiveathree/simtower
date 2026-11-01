@@ -9,7 +9,7 @@ export function buildTools(){
   for(const k of ORDER){const d=TYPES[k],locked=d.star>G.S.stars;
     const b=document.createElement('button');b.className='tool'+(locked?' locked':'');b.id='tool-'+k;b.style.setProperty('--sw',SW[k]);
     b.setAttribute('aria-pressed',G.tool===k);
-    b.innerHTML=`<i></i><b>${d.name}</b><small>${locked?d.star+'★ 解鎖':d.tool?'—':k==='elevator'?'$30,000+':fmt(d.cost)}</small>`;
+    b.innerHTML=`<i></i><b>${d.name}</b><small>${locked?d.star+'★ 解鎖':d.tool?'—':d.lift?fmt(d.cost)+'+':fmt(d.cost)}</small>`;
     b.title=d.desc;b.onclick=()=>{if(locked){log(`${d.name}要 ${d.star}★ 先解鎖`,'bad');return;}setTool(k);};
     nav.appendChild(b);}
 }

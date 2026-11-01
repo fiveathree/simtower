@@ -3,7 +3,7 @@ import {rnd} from './config.js';
 import {G,floatTxt,save} from './state.js';
 import {route,reach,lobbyX} from './route.js';
 import {trip,stepAgent} from './agents.js';
-import {stepCar} from './elevator.js';
+import {stepShaft} from './elevator.js';
 import {pop,hourTick,quarterEnd} from './economy.js';
 
 export function addEv(t,k,id,id2){const e={t,k,id,id2};let lo=G.evi,hi=G.events.length;while(lo<hi){const m=(lo+hi)>>1;if(G.events[m].t<=t)lo=m+1;else hi=m;}G.events.splice(lo,0,e);}
@@ -12,11 +12,11 @@ export function genDay(d,from){
   const ev=(t,k,id)=>{if(t>=from)addEv(t,k,id);};
   let shops=0,foods=0;
   for(const u of G.S.units){
-    if(u.type==='food')foods++;
+    if(u.type==='food'){foods++;ev(base+rnd(540,630),'svc',u.id);}
     if(u.type==='shop'&&u.occ)shops++;
     if(u.type==='office'&&u.occ){u.present=0;if(wk)for(let i=0;i<6;i++){ev(base+rnd(450,540),'in',u.id);if(Math.random()<.45)ev(base+rnd(715,770),'lunch',u.id);ev(base+rnd(1010,1110),'out',u.id);}}
     else if(u.type==='condo'&&u.occ){u.present=3;for(let i=0;i<3;i++)if(wk||Math.random()<.5){const o=wk?rnd(420,540):rnd(600,840);ev(base+o,'out',u.id);ev(base+(wk?rnd(1020,1260):o+rnd(120,360)),'in',u.id);}}
-    else if(u.type==='hotel'){if(u.occ){u.present=2;ev(base+rnd(470,560),'out',u.id);ev(base+rnd(470,580),'out',u.id);ev(base+605,'hfree',u.id);}ev(base+1020+rnd(0,30),'hotel',u.id);}
+    else if(u.type==='hotel'){if(Math.random()<.25)ev(base+rnd(620,720),'svc',u.id);if(u.occ){u.present=2;ev(base+rnd(470,560),'out',u.id);ev(base+rnd(470,580),'out',u.id);ev(base+605,'hfree',u.id);}ev(base+1020+rnd(0,30),'hotel',u.id);}
     else if(u.type==='food'||u.type==='shop')u.present=0;
   }
   if(foods+shops>0){
@@ -41,6 +41,8 @@ export function handle(e){
       const tg=ts[Math.floor(Math.random()*ts.length)];const lx=lobbyX();if(lx==null)return;
       trip(0,lx,tg.f,tg.x+1+Math.random()*(tg.w-2),'visit',{tid:tg.id});break;}
     case 'vout':{if(!u)return;u.present=Math.max(0,u.present-1);const lx=lobbyX();if(lx==null)return;trip(u.f,u.x+Math.random()*u.w,0,lx,'vo',{});break;}
+    case 'svc':{if(!u)return;const lx=lobbyX();if(lx==null)return;trip(0,lx,u.f,u.x+Math.random()*u.w,'svc',{tid:u.id,svc:true});break;}
+    case 'svcOut':{if(!u)return;const lx=lobbyX();if(lx==null)return;trip(u.f,u.x+Math.random()*u.w,0,lx,'vo',{svc:true});break;}
     case 'hotel':{
       if(!u||u.occ||!reach(u))return;
       if(Math.random()<.3+u.sat/250+G.S.stars*.06){u.occ=true;G.S.money+=1500;floatTxt(u.x+2.5,u.f+1,'+$1,500','#ffd27a');
@@ -54,10 +56,11 @@ export function sim(dt){
   G.S.t+=dt;
   const d=Math.floor(G.S.t/1440);
   if(d!==G.lastDay){G.lastDay=d;G.events=G.events.slice(G.evi);G.evi=0;if(d%3===0)quarterEnd();genDay(d,G.S.t-dt);save();}
+  if(Math.floor(G.S.t/5)!==Math.floor((G.S.t-dt)/5))G.rcache=new Map(); // 候梯人數變咗，路線要重新計
   const h=Math.floor(G.S.t/60);if(h!==G.lastHour){G.lastHour=h;hourTick();}
   while(G.evi<G.events.length&&G.events[G.evi].t<=G.S.t)handle(G.events[G.evi++]);
   for(const a of G.agents)if(!a.dead)stepAgent(a,dt);
-  for(const c of G.cars.values())stepCar(c,dt);
+  for(const s of G.cars.values())stepShaft(s,dt);
   if(G.agents.some(a=>a.dead))G.agents=G.agents.filter(a=>!a.dead);
   for(const f of G.floats)f.t+=dt;G.floats=G.floats.filter(f=>f.t<12);
 }

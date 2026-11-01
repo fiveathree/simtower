@@ -33,7 +33,7 @@ export function quarterEnd(){
   for(const u of G.S.units){
     const d=TYPES[u.type];
     if(u.occ&&d.rent)rent+=d.rent;
-    if(u.type==='elevator')up+=10000;
+    if(d.carUpkeep)up+=d.carUpkeep*u.cars.length;
     if(d.upkeep)up+=d.upkeep;
     if(u.occ&&(u.type==='office'||u.type==='shop')&&u.sat<25){u.occ=false;u.present=0;left++;}
     if(u.occ&&u.type==='condo'&&u.sat<12){u.occ=false;u.present=0;left++;}
