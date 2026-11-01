@@ -1,5 +1,4 @@
-// 音效：全部即場合成，預設靜音，要玩家按掣先開
-const KEY='skytower_sound';
+// 音效：全部即場合成，預設靜音，每次開遊戲都要玩家按掣先開（瀏覽器規定）
 const GAP={ding:1200,coin:500,alarm:4000}; // 同一種音最少隔幾耐（ms）
 let ac=null,master=null,crowd=null,on=false,volume=.25;
 const last={};
@@ -20,11 +19,8 @@ function ensure(){
 }
 export function setSound(v){
   on=v;
-  try{localStorage.setItem(KEY,v?'1':'0');}catch(e){}
   if(v){ensure();ac.resume();}else if(ac)ac.suspend();
 }
-// 瀏覽器要用戶操作先准出聲，所以重新載入後都係等按掣；只記低偏好
-export function wantedSound(){try{return localStorage.getItem(KEY)==='1';}catch(e){return false;}}
 function tone(freq,at,dur,peak,type='sine'){
   const o=ac.createOscillator(),g=ac.createGain(),t=ac.currentTime+at;
   o.type=type;o.frequency.value=freq;
