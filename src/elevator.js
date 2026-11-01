@@ -12,6 +12,12 @@ export function syncStops(s){
   for(const[g,q]of s.q)if(!s.stops.includes(g))for(const a of q)a.dead=true;
   for(const c of s.cars)for(const a of c.riders)if(!s.stops.includes(a.to))a.dead=true;
 }
+// 電梯縮短之後，界外嘅轎廂搬返入嚟
+export function clampCars(u){
+  const s=G.cars.get(u.id);if(!s)return;
+  const lo=u.f,hi=u.f+u.h-1;
+  for(const c of s.cars)if(c.pos<lo||c.pos>hi||c.next<lo||c.next>hi){c.pos=Math.min(hi,Math.max(lo,Math.round(c.pos)));c.next=c.pos;c.moving=false;c.dir=0;c.park=null;}
+}
 export function addCar(u){
   const s=G.cars.get(u.id);if(!s)return '搵唔到呢部電梯';
   if(s.cars.length>=MAX_CARS)return `每部電梯最多 ${MAX_CARS} 個轎廂`;

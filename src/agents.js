@@ -27,7 +27,7 @@ export function stepAgent(a,dt){
     const d=a.tx-a.x,s=WALK*dt;
     if(Math.abs(d)>s){a.x+=Math.sign(d)*s;return;}
     a.x=a.tx;
-    if(a.after==='wait'){const c=G.cars.get(a.elev.id);if(!c){a.dead=true;return;}a.state='wait';let q=c.q.get(a.f);if(!q){q=[];c.q.set(a.f,q);}q.push(a);}
+    if(a.after==='wait'){const c=G.cars.get(a.elev.id);if(!c||!c.stopSet.has(a.f)){a.dead=true;return;}a.state='wait';let q=c.q.get(a.f);if(!q){q=[];c.q.set(a.f,q);}q.push(a);}
     else if(a.after==='climb'){a.state='climb';a.cp=0;a.cf=a.f;a.cx=a.x;a.ex=a.to>a.f?a.st.x+a.st.w-.5:a.st.x+.5;}
     else arrive(a);
   }else if(a.state==='wait'){a.wait+=dt;}

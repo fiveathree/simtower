@@ -2,7 +2,7 @@
 import {TYPES,MINF,MAXF,W,SKY_FLOORS,SITE,fi,fmt,fname} from './config.js';
 import {G,earn,floatTxt,hooks} from './state.js';
 import {dirty} from './route.js';
-import {makeShaft,stopsOf} from './elevator.js';
+import {makeShaft,stopsOf,clampCars} from './elevator.js';
 
 export function mark(u,val){for(let f=u.f;f<u.f+u.h;f++){const o=G.occ[fi(f)],s=G.S.slab[fi(f)];for(let x=u.x;x<u.x+u.w;x++){o[x]=val;if(val&&!s[x])s[x]=1;}}}
 export function costOf(type,h){const d=TYPES[type];return d.lift?d.cost+d.per*h:d.cost;}
@@ -34,6 +34,28 @@ export function place(type,f,x,h,free){
   if(d.lift)u.cars=[{home:f,rush:true}];
   G.S.units.push(u);mark(u,u.id);if(d.lift)makeShaft(u);dirty();
   if(!free)floatTxt(x+d.w/2,f+h,'−'+fmt(costOf(type,h)).slice(1),'#ff8a7a');
+  return null;
+}
+// 拉長或者縮短已建電梯：加層照每層收費，縮短唔退錢
+export function checkResize(u,nf,nh){
+  const d=TYPES[u.type];
+  if(nh<2)return '至少跨兩層';
+  if(nh>d.maxH)return `最多跨 ${d.maxH} 層`;
+  if(nf<MINF||nf+nh-1>MAXF)return '超出可建高度';
+  if(d.express&&stopsOf(u.type,nf,nh).length<2)return '要經過至少兩個大堂或者空中大堂';
+  for(let f=nf;f<nf+nh;f++){
+    if(f>=u.f&&f<u.f+u.h)continue;
+    for(let x=u.x;x<u.x+u.w;x++)if(G.occ[fi(f)][x])return '位置已被佔用';
+  }
+  if(G.S.money<d.per*Math.max(0,nh-u.h))return '資金不足';
+  return null;
+}
+export function resizeLift(u,nf,nh){
+  const err=checkResize(u,nf,nh);if(err)return err;
+  const add=Math.max(0,nh-u.h);
+  mark(u,0);u.f=nf;u.h=nh;mark(u,u.id);
+  if(add){const c=TYPES[u.type].per*add;earn('build',-c);floatTxt(u.x+u.w/2,nf+nh,'−'+fmt(c).slice(1),'#ff8a7a');}
+  clampCars(u);dirty();
   return null;
 }
 export function paint(type,f,x,free){

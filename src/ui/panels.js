@@ -1,7 +1,7 @@
 // 資訊面板、訊息、對話框
 import {TYPES,SITE,SITES,SLOTS,MAX_CARS,CAR_COST,FILMS,PARK_SLOTS,LEDGER,RENT,rentOf,tenantName,filmAppeal,HELP_KEY,fname,fmt} from '../config.js';
 import {G,V,cam,clampCam,newGame,enter,load,save,useSlot,deleteSlot} from '../state.js';
-import {removeUnit} from '../build.js';
+import {removeUnit,resizeLift} from '../build.js';
 import {setSound,soundOn,sfx} from '../audio.js';
 import {startTutorial} from './tutorial.js';
 import {addCar} from '../elevator.js';
@@ -36,11 +36,13 @@ function buildCfg(){
   if(!s){el.innerHTML='';return;}
   const opts=c=>[...s.stops].reverse().map(f=>`<option value="${f}"${f===c.cfg.home?' selected':''}>${fname(f)}</option>`).join('');
   el.innerHTML=`<div class="carList">${s.cars.map((c,i)=>`<div class="car"><b>${i+1}</b><label>待命<select data-i="${i}" aria-label="轎廂 ${i+1} 待命樓層">${opts(c)}</select></label><button data-r="${i}" aria-pressed="${c.cfg.rush}" title="早上優先向上，傍晚優先向下">繁忙</button></div>`).join('')}</div>
+  <div class="liftBtns"><button data-grow="1">向上加一層</button><button data-grow="-1">向下加一層</button></div>
   <button id="addCar"${s.cars.length>=MAX_CARS?' disabled':''}>加轎廂 ${fmt(CAR_COST)}</button>`;
   el.onchange=e=>{const i=e.target.dataset.i;if(i!=null)s.cars[+i].cfg.home=+e.target.value;};
   el.onclick=e=>{
     if(e.target.dataset.r!=null){const c=s.cars[+e.target.dataset.r];c.cfg.rush=!c.cfg.rush;e.target.setAttribute('aria-pressed',c.cfg.rush);}
     else if(e.target.id==='addCar'){const err=addCar(u);if(err)log(err,'bad');buildCfg();}
+    else if(e.target.dataset.grow){const up=e.target.dataset.grow==='1',err=resizeLift(u,up?u.f:u.f-1,u.h+1);if(err)log(err,'bad');buildCfg();updInfo();}
   };
 }
 export function closeInfo(){G.sel=null;$('#info').hidden=true;}
@@ -69,7 +71,7 @@ export function showHelp(){
   $('#mcard').innerHTML=`<h2>天際大廈 <span>點樣玩</span></h2>
   <p>喺空地起一座摩天大廈：放租辦公室、賣住宅、開酒店，安排好電梯等住客唔使等太耐，將大廈由 1★ 經營到 <b>TOWER</b>。</p>
   <ul>
-   <li>所有人都由 <b>1F 大堂</b>出入。上層要有<b>電梯</b>（由一層拖到另一層）或<b>樓梯</b>先上得到。</li>
+   <li>一開始只得資金同一幅空地：先喺 1F 拖出<b>大堂</b>，所有人都由大堂出入。上層要有<b>電梯</b>（由一層拖到另一層）或<b>樓梯</b>先上得到。已建電梯可以撳住頂格或者底格拉長。</li>
    <li>每一層下面要有樓面承托；用「樓面」可以拖曳鋪空地板。</li>
    <li>高樓用<b>快速電梯</b>：喺 16F、31F、46F 起<b>空中大堂</b>，快速電梯只停大堂，再轉普通電梯。用「查看」點電梯可以加轎廂、設待命樓層同繁忙策略。</li>
    <li><b>貨梯</b>專俾酒店清潔同餐廳送貨用，唔會同住客爭電梯。</li>

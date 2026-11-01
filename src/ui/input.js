@@ -1,7 +1,7 @@
 // 滑鼠、觸控、鍵盤
 import {TYPES,CW,FH,W,MINF,MAXF,fi,fname} from '../config.js';
 import {G,cam,V,clampCam} from '../state.js';
-import {place,paint,bulldozeAt} from '../build.js';
+import {place,paint,bulldozeAt,resizeLift} from '../build.js';
 import {dirty} from '../route.js';
 import {log,openInfo,closeInfo} from './panels.js';
 import {setTool} from './tools.js';
@@ -12,6 +12,16 @@ function toWorld(sx,sy){const wx=(sx-V.VW/2)/cam.z+cam.x,wy=(sy-V.VH/2)/cam.z+ca
 const pts=new Map();
 let paintErr=null;
 function doPaint(f,x){const err=paint(G.tool,f,x);if(err&&err!=='skip')paintErr=err;else if(!err)dirty();}
+// 撳中電梯最頂或者最底一格就係拉伸；電梯工具撳中同款電梯任何一格都得
+function liftEnd(w){
+  if(w.f<MINF||w.f>MAXF||w.cell<0||w.cell>=W)return null;
+  const u=G.byId.get(G.occ[fi(w.f)][w.cell]);if(!u||!TYPES[u.type].lift)return null;
+  const top=u.f+u.h-1;
+  if(w.f===top)return{u,end:'top'};
+  if(w.f===u.f)return{u,end:'bot'};
+  if(G.tool===u.type)return{u,end:w.f>u.f+(u.h-1)/2?'top':'bot'};
+  return null;
+}
 function click(w){
   if(G.tool==='inspect'){const id=(w.f>=MINF&&w.f<=MAXF&&w.cell>=0&&w.cell<W)?G.occ[fi(w.f)][w.cell]:0;if(id)openInfo(id);else closeInfo();return;}
   if(G.tool==='bulldoze'){bulldozeAt(w.f,w.cell);return;}
@@ -28,10 +38,12 @@ cvs.addEventListener('pointerdown',e=>{
   const w=toWorld(e.offsetX,e.offsetY),pan=e.button===1||e.button===2;
   G.drag={mode:pan?'pan':'press',sx:e.offsetX,sy:e.offsetY,cx:cam.x,cy:cam.y,moved:false};
   if(!pan&&TYPES[G.tool].paint){G.drag.mode='paint';G.drag.f=w.f;G.drag.last=w.cell;doPaint(w.f,w.cell);}
+  const end=!pan&&(G.tool==='inspect'||G.tool===G.byId.get(G.occ[fi(Math.min(MAXF,Math.max(MINF,w.f)))]?.[w.cell])?.type)?liftEnd(w):null;
+  if(end){G.drag.mode='lift';G.drag.u=end.u;G.drag.end=end.end;G.drag.f=end.u.f;G.drag.h=end.u.h;}
   else if(!pan&&TYPES[G.tool].lift){G.drag.mode='elev';G.drag.f0=G.drag.f1=w.f;G.drag.x=w.cell-Math.floor(TYPES[G.tool].w/2);}
 });
 cvs.addEventListener('pointermove',e=>{
-  if(e.pointerType==='mouse')G.hover=toWorld(e.offsetX,e.offsetY);
+  if(e.pointerType==='mouse'){G.hover=toWorld(e.offsetX,e.offsetY);if(!G.drag&&(G.tool==='inspect'||TYPES[G.tool].lift))cvs.style.cursor=liftEnd(G.hover)?'ns-resize':G.tool==='inspect'?'grab':'crosshair';}
   if(!pts.has(e.pointerId))return;pts.set(e.pointerId,{x:e.offsetX,y:e.offsetY});
   if(!G.drag)return;
   if(G.drag.mode==='pinch'&&pts.size===2){const[p,q]=[...pts.values()];cam.z=G.drag.z*Math.hypot(p.x-q.x,p.y-q.y)/G.drag.d;clampCam();return;}
@@ -40,6 +52,10 @@ cvs.addEventListener('pointermove',e=>{
   if(G.drag.mode==='pan'){cam.x=G.drag.cx-dx/cam.z;cam.y=G.drag.cy-dy/cam.z;clampCam();}
   else if(G.drag.mode==='paint'){const w=toWorld(e.offsetX,e.offsetY);const a=Math.min(G.drag.last,w.cell),b=Math.max(G.drag.last,w.cell);for(let c=a;c<=b;c++)doPaint(G.drag.f,c);G.drag.last=w.cell;}
   else if(G.drag.mode==='elev'){G.drag.f1=toWorld(e.offsetX,e.offsetY).f;}
+  else if(G.drag.mode==='lift'){
+    const u=G.drag.u,t=toWorld(e.offsetX,e.offsetY).f,top=u.f+u.h-1;
+    if(G.drag.end==='top'){G.drag.f=u.f;G.drag.h=Math.max(1,t-u.f+1);}else{const lo=Math.min(t,top);G.drag.f=lo;G.drag.h=top-lo+1;}
+  }
 });
 function endPtr(e){
   pts.delete(e.pointerId);if(!G.drag)return;
@@ -49,6 +65,11 @@ function endPtr(e){
     const d=TYPES[G.tool];
     if(h<2)log(`${d.name}要由一層拖到另一層（至少跨兩層）`,'bad');else if(h>d.maxH)log(`${d.name}最多跨 ${d.maxH} 層`,'bad');
     else{const err=place(G.tool,f,G.drag.x,h);if(err)log(err,'bad');else log(`起咗${d.name} ${fname(f)}–${fname(f+h-1)}`);}}
+  else if(G.drag.mode==='lift'){
+    const u=G.drag.u;
+    if(G.drag.f===u.f&&G.drag.h===u.h){if(!G.drag.moved)click(w);}
+    else{const err=resizeLift(u,G.drag.f,G.drag.h);if(err)log(err,'bad');else log(`${TYPES[u.type].name}而家係 ${fname(u.f)}–${fname(u.f+u.h-1)}`);}
+  }
   else if(G.drag.mode==='paint'&&paintErr){log(paintErr,'bad');}
   paintErr=null;
   if(pts.size===0)G.drag=null;else if(G.drag.mode==='pinch')G.drag=null;

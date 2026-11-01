@@ -20,7 +20,7 @@ initHud();initPanels();initInput();
 resize();window.addEventListener('resize',resize);
 loadSlotId();
 const saved=load();
-if(saved)enter(saved);else newGame('kaohsiung');
+if(saved)enter(saved);else newGame('hongkong');
 setTool('inspect');setSpeed(1);updHUD();
 firstRunHelp(()=>{if(!saved)showSites(true,()=>{if(!tutorialSeen())startTutorial();});});
 document.addEventListener('visibilitychange',()=>{if(document.hidden)save();});

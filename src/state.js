@@ -1,7 +1,7 @@
 // 遊戲狀態：G 係全部會被換走嘅執行中資料；G.S 係會存檔嘅部分。
-import {TYPES,SAVE_VERSION,SAVE_KEY,LEGACY_KEY,SLOT_KEY,SITE,setSite,NF,W,CW,FH,MINF,MAXF} from './config.js';
+import {SAVE_VERSION,SAVE_KEY,LEGACY_KEY,SLOT_KEY,SITE,setSite,NF,W,CW,FH,MINF,MAXF} from './config.js';
 import {dirty} from './route.js';
-import {mark,paint,place} from './build.js';
+import {mark} from './build.js';
 import {makeShaft} from './elevator.js';
 import {genDay} from './schedule.js';
 
@@ -62,19 +62,7 @@ export function enter(o){setSite(o.site);hooks.siteChanged();G.S=o;initRuntime()
 export function newGame(id=SITE.id){
   setSite(id);hooks.siteChanged();
   G.S=blank();G.occ=Array.from({length:NF},()=>new Int32Array(W));G.cars=new Map();dirty();
-  const cx=W/2,lo=Math.max(2,cx-40),hi=Math.min(W-2,cx+40);
-  for(let x=lo;x<hi;x++)paint('lobby',0,x,true);dirty();
-  place('elevator',0,cx-2,6,true);place('stairs',0,W<100?lo:hi-6,2,true);
-  const offX=[-38,-29,-20,-11,2,11,20].map(d=>cx+d);
-  const layout={1:offX.map(x=>['office',x]),2:offX.map(x=>['office',x]),3:[-38,-26,-14,2,14,26].map(d=>['condo',cx+d]),4:[['food',cx-38],['condo',cx+2],['condo',cx+14]],5:[]};
-  for(let f=1;f<=5;f++){
-    for(const[t0,x]of layout[f]){const t=SITE.ban.includes(t0)?'office':t0;if(W<100&&x+TYPES[t].w>hi-8)continue; // 窄地盤留位俾快速電梯
-      const err=place(t,f,x,null,true);if(!err){const u=G.S.units[G.S.units.length-1];
-      if(t==='office')u.occ=f===1||x<cx-15;if(t==='condo')u.occ=f===3&&x<cx;}}
-    if(f<5)for(let x=lo;x<hi;x++)paint('floor',f,x,true);
-    dirty();
-  }
   initRuntime();
-  frameCam(3);
+  frameCam(6);
   hooks.closeInfo();save();hooks.buildTools();
 }

@@ -1,8 +1,8 @@
 // 幽靈預覽、評價視圖、浮動文字
-import {TYPES,CW,FH,fmt} from '../config.js';
+import {TYPES,CW,FH,fmt,fname} from '../config.js';
 import {G,V,R,SX,SY} from '../state.js';
 import {isXmas} from '../events.js';
-import {checkPlace,costOf} from '../build.js';
+import {checkPlace,costOf,checkResize} from '../build.js';
 
 export function evalTint(u,X,Y,Wd,Hd){
   const t=u.type;
@@ -30,7 +30,26 @@ export function drawFloats(z){
   for(const f of G.floats){V.ctx.globalAlpha=Math.max(0,1-f.t/12);V.ctx.fillStyle=f.col;V.ctx.fillText(f.txt,SX(f.x*CW),SY(-f.f*FH)-f.t*1.6*z);}
   V.ctx.globalAlpha=1;V.ctx.textAlign='left';
 }
+// 拖電梯時每格標樓層
+function floorMarks(f,h,X,Wd,z,col){
+  const fh=FH*z;if(fh<9)return;
+  V.ctx.font=`700 ${Math.min(12,fh*.42)}px "Share Tech Mono",monospace`;V.ctx.textAlign='center';V.ctx.fillStyle=col;
+  for(let i=f;i<f+h;i++)V.ctx.fillText(fname(i),X+Wd/2,SY(-i*FH)-fh*.34);
+  V.ctx.textAlign='left';
+}
+function ghostTag(txt,X,Y,err){
+  V.ctx.font='700 12px "Noto Sans TC",sans-serif';const tw=V.ctx.measureText(txt).width;
+  R(X,Y-18,tw+10,16,'rgba(10,12,16,.85)');V.ctx.fillStyle=err?'#ff8a7a':'#ffd27a';V.ctx.fillText(txt,X+5,Y-6);
+}
 export function drawGhost(z){
+  if(G.drag&&G.drag.mode==='lift'){
+    const {u,f,h}=G.drag,err=f===u.f&&h===u.h?null:checkResize(u,f,h),d=TYPES[u.type];
+    const X=SX(u.x*CW),Y=SY(-(f+h)*FH),Wd=u.w*CW*z,Hd=h*FH*z;
+    R(X,Y,Wd,Hd,err?'rgba(255,90,80,.38)':'rgba(120,230,150,.3)');V.ctx.strokeStyle=err?'#ff6b5d':'#62d38f';V.ctx.lineWidth=1.5;V.ctx.strokeRect(X,Y,Wd,Hd);
+    floorMarks(f,h,X,Wd,z,'#fff');
+    const add=Math.max(0,h-u.h);ghostTag(err||(add?'+'+fmt(d.per*add):h<u.h?'縮短（唔退錢）':'拖上或者拖落'),X,Y,err);
+    return;
+  }
   const d=TYPES[G.tool];if(!G.hover&&!(G.drag&&G.drag.mode==='elev'))return;
   if(d.tool){if(G.tool==='bulldoze'&&G.hover){R(SX(G.hover.cell*CW),SY(-(G.hover.f+1)*FH),CW*z,FH*z,'rgba(255,107,93,.45)');}return;}
   let f,x,h,err;
@@ -38,7 +57,7 @@ export function drawGhost(z){
   else if(d.paint){f=G.hover.f;x=G.hover.cell;h=1;err=null;}
   else{f=G.hover.f;x=G.hover.cell-Math.floor(d.w/2);h=d.h||1;err=checkPlace(G.tool,f,x,h);}
   const X=SX(x*CW),Y=SY(-(f+h)*FH),Wd=(d.w||1)*CW*z,Hd=h*FH*z;
+  if(d.lift)floorMarks(f,h,X,Wd,z,'#fff');
   R(X,Y,Wd,Hd,err?'rgba(255,90,80,.38)':'rgba(120,230,150,.38)');V.ctx.strokeStyle=err?'#ff6b5d':'#62d38f';V.ctx.lineWidth=1.5;V.ctx.strokeRect(X,Y,Wd,Hd);
-  V.ctx.font=`700 12px "Noto Sans TC",sans-serif`;const txt=err||fmt(d.lift?costOf(G.tool,Math.max(2,h)):d.cost)+(d.paint?' / 格':'');
-  const tw=V.ctx.measureText(txt).width;R(X,Y-18,tw+10,16,'rgba(10,12,16,.85)');V.ctx.fillStyle=err?'#ff8a7a':'#ffd27a';V.ctx.fillText(txt,X+5,Y-6);
+  ghostTag(err||fmt(d.lift?costOf(G.tool,Math.max(2,h)):d.cost)+(d.paint?' / 格':''),X,Y,err);
 }
