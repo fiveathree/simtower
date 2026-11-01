@@ -1,7 +1,7 @@
 // 設施資料、常數同小工具。轉 domain 時改 SITE_URL，同時改 index.html 嘅 og／twitter 網址。
 export const SITE_URL='https://fiveathree.github.io/simtower/';
 export const SAVE_VERSION=6;
-export const SAVE_KEY='skytower_save',LEGACY_KEY='skytower_v1',HELP_KEY='skytower_v1_help',SLOT_KEY='skytower_slot',SLOTS=3;
+export const SAVE_KEY='skytower_save',LEGACY_KEY='skytower_v1',HELP_KEY='skytower_v1_help',TUT_KEY='skytower_tut',SLOT_KEY='skytower_slot',SLOTS=3;
 export const CW=8,FH=28,MINF=-6,WALK=7,ESPD=5,CAP=15;
 // 地點：req 係人口目標倍數，towerPop 係 TOWER 額外人口，metro 係地鐵客量倍數，cap 係商業容量倍數，rent 係租金倍數。classic 只俾舊存檔用
 export const SITES={

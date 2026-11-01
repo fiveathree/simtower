@@ -20,6 +20,7 @@ export const count=t=>G.S.units.filter(u=>u.type===t).length;
 export function hourTick(){
   G.hourly={moveIn:0,sold:0,soldAmt:0};
   const h=Math.floor(G.S.t/60)%24,day=h>=8&&h<=20;
+  G.vTargets=null;
   for(const u of G.S.units){
     const t=u.type;
     if(t==='office'||t==='condo'||t==='shop'){

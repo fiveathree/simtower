@@ -15,7 +15,7 @@ export function dirty(){
     if(d.lift){const st=G.cars.get(u.id).stops,per=d.express?.1:.25;for(const a of st)for(const b of st)if(a!==b)G.adj[fi(a)].push({b,c:3+Math.abs(a-b)*per,t:'elev',id:u.id,svc:!!d.service});}
     else if(u.type==='stairs'){G.adj[fi(u.f)].push({b:u.f+1,c:2.2,t:'stairs'});G.adj[fi(u.f+1)].push({b:u.f,c:2.2,t:'stairs'});}
   }
-  G.rcache=new Map();
+  G.rcache=new Map();G.vTargets=null;G.foods=null;
   G.rampDepth=0;const ramps=new Set(G.S.units.filter(u=>u.type==='ramp').map(u=>u.f));while(ramps.has(-G.rampDepth-1))G.rampDepth++;
   for(const u of G.S.units){
     if(u.type==='parking')u.on=-u.f<=G.rampDepth;
@@ -48,7 +48,7 @@ export function pickLift(f,to,x,id){
   const t=G.byId.get(id);if(!t)return null;
   let b=null,bd=1e9;
   for(const s of G.cars.values()){
-    const u=s.u;if(u.type!==t.type||!s.stops.includes(f)||!s.stops.includes(to))continue;
+    const u=s.u;if(u.type!==t.type||!s.stopSet.has(f)||!s.stopSet.has(to))continue;
     const q=s.q.get(f),d=Math.abs(u.x+u.w/2-x)/WALK+(q?q.length:0)/(s.cap*s.cars.length)*6;
     if(d<bd){bd=d;b=u;}
   }

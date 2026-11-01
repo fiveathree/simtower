@@ -1,7 +1,9 @@
 // 資訊面板、訊息、對話框
-import {TYPES,SITES,SLOTS,MAX_CARS,CAR_COST,FILMS,PARK_SLOTS,LEDGER,RENT,rentOf,tenantName,filmAppeal,HELP_KEY,fname,fmt} from '../config.js';
-import {G,cam,clampCam,newGame,enter,load,save,useSlot,deleteSlot} from '../state.js';
+import {TYPES,SITE,SITES,SLOTS,MAX_CARS,CAR_COST,FILMS,PARK_SLOTS,LEDGER,RENT,rentOf,tenantName,filmAppeal,HELP_KEY,fname,fmt} from '../config.js';
+import {G,V,cam,clampCam,newGame,enter,load,save,useSlot,deleteSlot} from '../state.js';
 import {removeUnit} from '../build.js';
+import {setSound,soundOn,sfx} from '../audio.js';
+import {startTutorial} from './tutorial.js';
 import {addCar} from '../elevator.js';
 import {setFilm,setRent,reasons} from '../economy.js';
 
@@ -78,8 +80,9 @@ export function showHelp(){
    <li>人口＝租戶＋每日訪客。住客滿意，名氣就會慢慢升，訪客越嚟越多。升級條件：2★ 人口 300；3★ 人口 1,000＋保安室；4★ 人口 5,000＋醫療中心＋回收中心＋酒店套房；5★ 人口 10,000（高雄低四成半、香港高 5%）；TOWER 5★＋天台教堂＋地鐵站。</li>
   </ul>
   <p>操作：拖曳移動畫面、滾輪或雙指縮放、右鍵拖曳都可以移動；鍵盤 <kbd>WASD</kbd> 移動、<kbd>空白鍵</kbd> 暫停、<kbd>Esc</kbd> 取消工具。進度會自動儲存喺呢部機。</p>
-  <div class="acts"><button class="primary" id="mOk">開始</button></div>`;
+  <div class="acts"><button id="mTut">再睇教學</button><button class="primary" id="mOk">開始</button></div>`;
   $('#modal').hidden=false;$('#mOk').onclick=()=>{$('#modal').hidden=true;try{localStorage.setItem(HELP_KEY,'1');}catch(e){}};$('#mOk').focus();
+  $('#mTut').onclick=()=>{$('#modal').hidden=true;startTutorial();};
 }
 export function askNew(){showSites(false);}
 // 揀地點：first 係第一次玩，唔可以取消
@@ -115,7 +118,23 @@ export function showSlots(){
     ]);
   });
 }
-export function initPanels(){$('#helpBtn').onclick=showHelp;$('#newBtn').onclick=askNew;$('#finBtn').onclick=showFinance;$('#slotBtn').onclick=showSlots;}
+export function initPanels(){$('#helpBtn').onclick=showHelp;$('#newBtn').onclick=askNew;$('#finBtn').onclick=showFinance;$('#slotBtn').onclick=showSlots;$('#shotBtn').onclick=screenshot;
+  $('#soundBtn').onclick=()=>{setSound(!soundOn());$('#soundBtn').setAttribute('aria-pressed',soundOn());log(soundOn()?'聲音開咗':'聲音閂咗');};
+}
+// 截圖：畫布加一條資料列，輸出 PNG
+export function screenshot(){
+  const c=document.createElement('canvas');c.width=V.cvs.width;c.height=V.cvs.height;
+  const g=c.getContext('2d'),k=V.DPR,bar=34*k;
+  g.drawImage(V.cvs,0,0);g.fillStyle='rgba(14,17,20,.82)';g.fillRect(0,c.height-bar,c.width,bar);
+  const d=Math.floor(G.S.t/1440),stars=G.S.stars>=6?'TOWER':'★'.repeat(G.S.stars);
+  g.fillStyle='#ffb23f';g.font=`900 ${16*k}px "Noto Sans TC",sans-serif`;g.textBaseline='middle';
+  g.fillText(`天際大廈 ${SITE.name} ${stars}　第${Math.floor(d/12)+1}年　${fmt(G.S.money)}`,12*k,c.height-bar/2);
+  c.toBlob(b=>{
+    if(!b){log('截圖失敗','bad');return;}
+    const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download=`skytower-${SITE.id}-y${Math.floor(d/12)+1}.png`;
+    document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),2000);log('截圖已經下載','good');
+  },'image/png');
+}
 // 遊戲內對話框：開住時模擬會暫停
 export function ask(title,body,btns){
   $('#mcard').innerHTML=`<h2>${title}</h2><p>${body}</p><div class="acts">${btns.map((b,i)=>`<button data-b="${i}"${b.primary?' class="primary"':''}${b.disabled?' disabled':''}>${b.label}</button>`).join('')}</div>`;
@@ -124,6 +143,7 @@ export function ask(title,body,btns){
 }
 export function alertBar(msg,f,x){
   const el=$('#alert');el.hidden=!msg;if(!msg)return;
+  sfx('alarm');
   el.innerHTML=`<span></span><button>去睇</button>`;el.firstChild.textContent=msg;
   el.lastChild.onclick=()=>{cam.x=x*8;cam.y=-f*28;cam.z=Math.max(cam.z,1);clampCam();};
 }

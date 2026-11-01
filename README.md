@@ -32,6 +32,8 @@
 
 進度自動儲存喺瀏覽器 localStorage。
 
+其他：第一次玩有 5 步新手教學（「說明」入面可以再睇）；「聲音」掣開關音效，預設靜音；「截圖」掣下載 PNG。
+
 ## 地點
 
 開新遊戲時揀地點，每個地點嘅城市背景同天色都唔同。
@@ -82,8 +84,9 @@ src/
   schedule.js   每日日程、事件佇列、模擬一步
   economy.js    收入、支出、季度結算、升星
   events.js     火警、炸彈勒索、VIP、聖誕
+  audio.js      即場合成音效，預設靜音
   render/       world（背景同樓面）、units（設施）、people（小人同轎廂）、overlay（預覽同浮動字）
-  ui/           hud（頂欄）、tools（工具列）、panels（面板同對話框）、input（滑鼠觸控鍵盤）
+  ui/           hud（頂欄）、tools（工具列）、panels（面板同對話框）、input（滑鼠觸控鍵盤）、tutorial（新手教學）
 ```
 
 模擬部分（`src/*.js`）唔掂 DOM，要出訊息就經 `state.js` 嘅 `hooks`。
@@ -122,6 +125,6 @@ src/
 - [x] Phase 3：更多設施（天橋係可選項目，未做）
 - [x] Phase 4：事件同經營
 - [x] Phase 5：地點同難度
-- [ ] Phase 6：打磨
+- [x] Phase 6：打磨
 
 詳情睇 [PLAN.md](PLAN.md)。

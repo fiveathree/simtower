@@ -13,11 +13,17 @@ export function drawCars(z){
     });
   }
 }
+const DOT_AT=1500; // 人多過呢個數就用點代替，唔畫頭
 export function drawAgents(z){
+  const dots=G.agents.length>DOT_AT||z<.6,buckets=new Map(),s=z*.9;
   for(const a of G.agents){
     if(a.state==='ride'||a.dead)continue;
     let f=a.f,x=a.x;if(a.state==='climb'){f=a.cf+(a.to-a.cf)*a.cp;x=a.cx+(a.ex-a.cx)*a.cp;}
-    const sx=SX(x*CW),sy=SY(-f*FH)-2.5*z;if(sx<-5||sx>V.VW+5||sy<-10||sy>V.VH+10)continue;
-    const w=a.wait;person(sx,sy,z*.9,a.kind==='vip'?'#e6b422':a.kind==='guard'?'#1c2b6a':a.svc?'#2f6f8f':w<5?'#1d1d22':w<10?'#e2609a':'#d42a2a');
+    const sx=SX(x*CW),sy=SY(-f*FH)-2.5*z;if(sx<-5||sx>V.VW+5||sy<-10||sy>V.VH+10)continue; // 只畫畫面內
+    const w=a.wait,col=a.kind==='vip'?'#e6b422':a.kind==='guard'?'#1c2b6a':a.svc?'#2f6f8f':w<5?'#1d1d22':w<10?'#e2609a':'#d42a2a';
+    if(!dots){person(sx,sy,s,col);continue;}
+    let b=buckets.get(col);if(!b){b=[];buckets.set(col,b);}b.push(sx,sy);
   }
+  const dw=Math.max(1.5,2*s),dh=Math.max(2,7*s);
+  for(const[col,b]of buckets){V.ctx.fillStyle=col;for(let i=0;i<b.length;i+=2)V.ctx.fillRect(b[i]-dw/2,b[i+1]-dh,dw,dh);}
 }

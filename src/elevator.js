@@ -1,6 +1,6 @@
 // 轎廂邏輯：每條電梯井一條候梯隊，多個轎廂各自 SCAN，由派車分配呼叫
 import {TYPES,MAX_CARS,CAR_COST} from './config.js';
-import {G,earn} from './state.js';
+import {G,earn,hooks} from './state.js';
 import {nextLeg} from './agents.js';
 
 const newCar=(cfg,pos)=>({cfg,pos,dir:0,riders:[],stop:0,moving:false,next:pos,calls:new Set(),prev:new Set(),park:null});
@@ -8,7 +8,7 @@ export function makeShaft(u){const d=TYPES[u.type];G.cars.set(u.id,{u,q:new Map(
 export function stopsOf(type,f0,h){const d=TYPES[type],a=[];for(let f=f0;f<f0+h;f++)if(!d.express||f===0||G.skyFloors.has(f))a.push(f);return a;}
 // 樓層圖變咗之後更新停站；停唔到嘅站上嘅人當走咗
 export function syncStops(s){
-  s.stops=stopsOf(s.u.type,s.u.f,s.u.h);
+  s.stops=stopsOf(s.u.type,s.u.f,s.u.h);s.stopSet=new Set(s.stops);
   for(const[g,q]of s.q)if(!s.stops.includes(g))for(const a of q)a.dead=true;
   for(const c of s.cars)for(const a of c.riders)if(!s.stops.includes(a.to))a.dead=true;
 }
@@ -91,7 +91,7 @@ function stepCar(s,c,dt,pk){
     else c.dir=nearestDir(c,f);
   }
   if(c.dir!==0)for(let i=0;i<q.length&&c.riders.length<s.cap;){const a=q[i];if(a.dir===c.dir){q.splice(i,1);a.state='ride';c.riders.push(a);act=true;}else i++;}
-  if(act){c.stop=.45;return;}
+  if(act){c.stop=.45;hooks.sfx('ding');return;}
   if(c.dir!==0&&!hasAhead(c,c.dir,f))c.dir=nearestDir(c,f);
   if(c.dir===0){const h=parkFloor(s,c,pk);if(h!==f){c.park=h;c.dir=Math.sign(h-f);}}
   if(c.dir!==0){const n=nextStop(s,f,c.dir);if(n==null)c.dir=0;else{c.moving=true;c.next=n;}}

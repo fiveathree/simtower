@@ -10,7 +10,8 @@ import {tenants,rollVisitors,hourTick,quarterEnd} from './economy.js';
 export function addEv(t,k,id,id2){const e={t,k,id,id2};let lo=G.evi,hi=G.events.length;while(lo<hi){const m=(lo+hi)>>1;if(G.events[m].t<=t)lo=m+1;else hi=m;}G.events.splice(lo,0,e);}
 export function genDay(d,from){
   const base=d*1440,wk=d%3!==2;
-  const ev=(t,k,id)=>{if(t>=from)addEv(t,k,id);};
+  // 一次過排序：一日上萬個事件逐個插入會頓一下
+  const batch=[],ev=(t,k,id)=>{if(t>=from)batch.push({t,k,id,id2:undefined});};
   let shops=0,foods=0,slots=0,guests=0,dirty=0;
   for(const u of G.S.units){
     const D=TYPES[u.type];
@@ -40,6 +41,7 @@ export function genDay(d,from){
     const n=Math.min((shops*160+foods*180)*(SITE.cap||1),Math.round(base2+extra));
     for(let i=0;i<n;i++)ev(base+rnd(660,1200),'visit',m&&Math.random()<extra/(base2+extra)?m.id:0);
   }
+  if(batch.length){G.events=G.events.slice(G.evi).concat(batch).sort((a,b)=>a.t-b.t);G.evi=0;}
 }
 export function handle(e){
   const u=G.byId.get(e.id);
@@ -48,13 +50,13 @@ export function handle(e){
     case 'out':{if(!u)return;u.present=Math.max(0,u.present-1);const lx=lobbyX();if(lx==null)return;trip(u.f,u.x+Math.random()*u.w,0,lx,'out',{uid:u.id});break;}
     case 'lunch':{
       if(!u||!u.occ||u.present<=0)return;
-      const fs=G.S.units.filter(v=>v.type==='food'&&route(u.f,v.f)).sort((a,b)=>Math.abs(a.f-u.f)-Math.abs(b.f-u.f)).slice(0,3);
+      const fs=(G.foods||(G.foods=G.S.units.filter(v=>v.type==='food'))).filter(v=>route(u.f,v.f)).sort((a,b)=>Math.abs(a.f-u.f)-Math.abs(b.f-u.f)).slice(0,3);
       if(!fs.length)return;const fd=fs[Math.floor(Math.random()*fs.length)];
       u.present--;trip(u.f,u.x+Math.random()*u.w,fd.f,fd.x+1+Math.random()*(fd.w-2),'lunch',{uid:u.id,fid:fd.id});break;}
     case 'lunchBack':{const fd=G.byId.get(e.id2);if(!u)return;if(fd)fd.present=Math.max(0,fd.present-1);
       const sf=fd?fd.f:0,sx=fd?fd.x+Math.random()*fd.w:(lobbyX()||0);trip(sf,sx,u.f,u.x+Math.random()*u.w,'back',{uid:u.id});break;}
     case 'visit':{
-      const ts=G.S.units.filter(v=>(v.type==='food'||(v.type==='shop'&&v.occ))&&!v.unreach);if(!ts.length)return;
+      const ts=G.vTargets||(G.vTargets=G.S.units.filter(v=>(v.type==='food'||(v.type==='shop'&&v.occ))&&!v.unreach));if(!ts.length)return;
       const tg=ts[Math.floor(Math.random()*ts.length)];
       const from=u?u.f+u.h-1:0,fx=u?u.x+Math.random()*u.w:lobbyX();if(fx==null)return;
       trip(from,fx,tg.f,tg.x+1+Math.random()*(tg.w-2),'visit',{tid:tg.id,mid:e.id});break;}
@@ -101,8 +103,9 @@ export function sim(dt){
   if(Math.floor(G.S.t/5)!==Math.floor((G.S.t-dt)/5))G.rcache=new Map(); // 候梯人數變咗，路線要重新計
   const h=Math.floor(G.S.t/60);if(h!==G.lastHour){G.lastHour=h;hourTick();}
   while(G.evi<G.events.length&&G.events[G.evi].t<=G.S.t)handle(G.events[G.evi++]);
-  for(const a of G.agents)if(!a.dead)stepAgent(a,dt);
+  const A=G.agents;let n=0;
+  for(let i=0;i<A.length;i++){const a=A[i];if(!a.dead)stepAgent(a,dt);if(!a.dead)A[n++]=a;}
+  A.length=n;
   for(const s of G.cars.values())stepShaft(s,dt);
-  if(G.agents.some(a=>a.dead))G.agents=G.agents.filter(a=>!a.dead);
   for(const f of G.floats)f.t+=dt;G.floats=G.floats.filter(f=>f.t<12);
 }

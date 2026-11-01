@@ -9,10 +9,10 @@ export const G={slot:1,S:null,occ:null,byId:null,cars:null,skyFloors:new Set(),a
   tool:'inspect',evalView:false,speed:1,sel:null,hover:null,drag:null,hourly:{moveIn:0,sold:0,soldAmt:0}};
 export const cam={x:480,y:-140,z:1};
 export const V={cvs:null,ctx:null,DPR:1,VW:0,VH:0};
-export const hooks={log(){},closeInfo(){},buildTools(){},siteChanged(){},alert(){},ask(t,b,btns){btns[0].fn();}}; // 由 UI 接駁，等模擬部分唔使掂 DOM
+export const hooks={log(){},closeInfo(){},buildTools(){},siteChanged(){},sfx(){},alert(){},ask(t,b,btns){btns[0].fn();}}; // 由 UI 接駁，等模擬部分唔使掂 DOM
 
 export const SX=wx=>(wx-cam.x)*cam.z+V.VW/2,SY=wy=>(wy-cam.y)*cam.z+V.VH/2;
-export function earn(cat,n){G.S.money+=n;G.S.led[cat]=(G.S.led[cat]||0)+n;} // 所有收支都經呢度，財務報表先齊
+export function earn(cat,n){G.S.money+=n;G.S.led[cat]=(G.S.led[cat]||0)+n;if(n>=1000)hooks.sfx('coin');} // 所有收支都經呢度，財務報表先齊
 export function R(x,y,w,h,c){V.ctx.fillStyle=c;V.ctx.fillRect(x,y,w,h);}
 export function clampCam(){cam.z=Math.min(3,Math.max(.3,cam.z));cam.x=Math.min(W*CW+300,Math.max(-300,cam.x));cam.y=Math.min((-MINF+3)*FH,Math.max(-(MAXF+3)*FH,cam.y));}
 export function floatTxt(x,f,txt,col){G.floats.push({x,f,txt,col,t:0});if(G.floats.length>60)G.floats.shift();}
