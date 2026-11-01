@@ -25,10 +25,11 @@ export function drawUnit(u,X,Y,Wd,Hd,z,night){
      if(!u.occ){R(X,Y,Wd,Hd,'rgba(18,22,28,.6)');label('待售','#ffd27a');}
      else if(night&&u.present)R(X,Y,Wd,Hd,'rgba(255,200,90,.12)');
      break;}
-   case 'hotel':{
+   case 'hotel':case 'suite':{
      R(X,Y,Wd,Hd,u.occ?'#efe4f4':'#a69fae');
      R(X+Wd*.15,flY-7*z,Wd*.7,5*z,'#fff');R(X+Wd*.15,flY-9*z,5*z,3*z,'#d8cbe6');R(X+Wd*.15,flY-6*z,Wd*.7,2*z,'#8d6fb3');
      if(u.occ&&u.present)people(u.present,'#3b2d4a');
+     if(u.dirty){R(X,Y,Wd,Hd,'rgba(90,70,30,.55)');label('污糟','#ffd27a');}
      break;}
    case 'food':{
      R(X,Y,Wd,Hd,'#fbe7bd');
@@ -52,6 +53,30 @@ export function drawUnit(u,X,Y,Wd,Hd,z,night){
      const n=10;V.ctx.moveTo(X,flY);for(let i=0;i<n;i++){const sx=X+Wd*i/n,sy=flY-Hd*(i+1)/n+2*z;V.ctx.lineTo(sx,sy);V.ctx.lineTo(X+Wd*(i+1)/n,sy);}V.ctx.stroke();
      R(X+Wd*.5,Y+fh-2*z,Wd*.5,2*z,'#4a463f');
      break;}
+   case 'housekeeping':{
+     R(X,Y,Wd,Hd,'#d8ebe6');for(let i=0;i<4;i++){const cx=X+Wd*(.12+i*.22);R(cx,flY-9*z,Wd*.12,7*z,'#7fb5a8');R(cx,flY-11*z,Wd*.12,2*z,'#fff');}
+     label('清潔','#2c5a50');break;}
+   case 'conference':{
+     R(X,Y,Wd,Hd,'#e6ecf6');R(X+Wd*.15,flY-8*z,Wd*.7,3*z,'#7a5d3c');R(X+Wd*.45,flY-5*z,2*z,5*z,'#7a5d3c');R(X+Wd*.04,Y+4*z,Wd*.08,10*z,'#fff');
+     people(u.present,'#2b3346');break;}
+   case 'cinema':{
+     R(X,Y,Wd,Hd,'#3a1518');R(X+Wd*.15,Y+5*z,Wd*.7,Hd*.42,u.film?'#dfe6f2':'#3c3438');
+     for(let r=0;r<3;r++)for(let i=0;i<12;i++)R(X+Wd*(.1+i*.067),flY-(5+r*5)*z,Wd*.04,3*z,'#8d2f38');
+     people(u.present,'#120809');label(u.film?u.film.name:'未揀片',u.film?'#23272f':'#ffd27a');break;}
+   case 'clinic':{
+     R(X,Y,Wd,Hd,'#f6f7f8');R(X+Wd*.45,Y+6*z,Wd*.1,Hd-12*z,'#d83a3a');R(X+Wd*.5-Hd*.3,Y+Hd*.5-2*z,Hd*.6,4*z,'#d83a3a');break;}
+   case 'billboard':{
+     R(X+Wd*.2,Y+Hd*.6,3*z,Hd*.4,'#555');R(X+Wd*.75,Y+Hd*.6,3*z,Hd*.4,'#555');R(X,Y,Wd,Hd*.62,'#ffd27a');R(X,Y,Wd,3*z,'#d6402e');label('廣告位','#3a2a10');break;}
+   case 'parking':{
+     R(X,Y,Wd,Hd,'#54575d');for(let i=0;i<4;i++){const cx=X+Wd*(.06+i*.24);R(cx,flY-7*z,Wd*.18,5*z,['#b8423a','#3f6fb0','#d9d9d9','#3b9068'][i]);}
+     if(!u.on){R(X,Y,Wd,Hd,'rgba(18,22,28,.6)');label('未連斜路','#ffd27a');}break;}
+   case 'ramp':{
+     R(X,Y,Wd,Hd,'#6b6558');V.ctx.fillStyle='#a59b86';V.ctx.beginPath();V.ctx.moveTo(X,Y+3*z);V.ctx.lineTo(X+Wd,flY);V.ctx.lineTo(X,flY);V.ctx.fill();break;}
+   case 'recycle':{
+     R(X,Y,Wd,Hd,'#3f5a42');for(let i=0;i<5;i++)R(X+Wd*(.06+i*.19),flY-11*z,Wd*.13,9*z,['#6db36d','#4f9de0','#e3b341','#6db36d','#c0c0c0'][i]);break;}
+   case 'metro':{
+     R(X,Y,Wd,Hd,'#c9d6e2');R(X,flY-5*z,Wd,5*z,'#3c4148');R(X+Wd*.1,flY-Hd*.42,Wd*.8,Hd*.34,'#4f9de0');
+     for(let i=0;i<9;i++)R(X+Wd*(.13+i*.085),flY-Hd*.38,Wd*.05,Hd*.12,'#dff0fb');label('地鐵站','#1c2b4a');break;}
    case 'elevator':case 'express':case 'service':{
      R(X,Y,Wd,Hd,t==='express'?'#27333f':t==='service'?'#26332c':'#2f343a');R(X+Wd*.2,Y,1,Hd,'#55606b');R(X+Wd*.8,Y,1,Hd,'#55606b');
      V.ctx.strokeStyle='#7d8791';V.ctx.lineWidth=1;for(let i=0;i<u.h;i++){const f=u.f+u.h-1-i;if(t!=='express'||f===0||G.skyFloors.has(f))V.ctx.strokeRect(X+1.5,Y+i*fh+fh*.25,Wd-3,fh*.75-2);}

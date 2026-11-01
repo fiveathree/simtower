@@ -12,13 +12,16 @@ export function checkPlace(type,f,x,h){
   if(x<0||x+d.w>W)return '超出地盤範圍';
   if(f<MINF||f+h-1>MAXF)return '超出可建高度';
   if(d.minF&&f<d.minF)return '只可以起喺 30F 或以上';
+  if(d.fixF!=null&&f!==d.fixF)return '只可以起喺 B6–B4';
+  if(d.basement&&f>=0)return '只可以起喺地庫';
+  if(d.roof){if(f<1)return '要起喺天台';if(f+h<=MAXF)for(let xx=x;xx<x+d.w;xx++)if(G.S.slab[fi(f+h)][xx])return '上面要係天空先起得';}
   if(d.express&&stopsOf(type,f,h).length<2)return '要經過至少兩個大堂或者空中大堂';
   const transport=d.lift||type==='stairs';
   for(let ff=f;ff<f+h;ff++)for(let xx=x;xx<x+d.w;xx++){
     if(G.occ[fi(ff)][xx])return '位置已被佔用';
     if(!transport&&G.S.slab[fi(ff)][xx]===2)return '大堂位置只可以放電梯或樓梯';
   }
-  if(f!==0){const sf=f>0?f-1:f+1;for(let xx=x;xx<x+d.w;xx++)if(!G.S.slab[fi(sf)][xx])return f>0?'下面要有樓面承托':'上面要有樓面先可以挖地庫';}
+  if(f!==0){const sf=f>0?f-1:f+h>0?0:f+h;for(let xx=x;xx<x+d.w;xx++)if(!G.S.slab[fi(sf)][xx])return f>0?'下面要有樓面承托':'上面要有樓面先可以挖地庫';}
   if(G.S.money<costOf(type,h))return '資金不足';
   return null;
 }
@@ -26,7 +29,7 @@ export function place(type,f,x,h,free){
   const err=checkPlace(type,f,x,h);if(err&&!(free&&err==='資金不足'))return err;
   const d=TYPES[type];h=h||d.h||1;
   if(!free)G.S.money-=costOf(type,h);
-  const u={id:G.S.nextId++,type,f,x,w:d.w,h,occ:!!d.lift||['food','security','cathedral','stairs'].includes(type),sat:70,present:0};
+  const u={id:G.S.nextId++,type,f,x,w:d.w,h,occ:!!d.lift||!!d.always||['food','security','stairs'].includes(type),sat:70,present:0};
   if(d.lift)u.cars=[{home:f,rush:true}];
   G.S.units.push(u);mark(u,u.id);if(d.lift)makeShaft(u);dirty();
   if(!free)floatTxt(x+d.w/2,f+h,'−'+fmt(costOf(type,h)).slice(1),'#ff8a7a');

@@ -1,8 +1,9 @@
 // 資訊面板、訊息、對話框
-import {TYPES,MAX_CARS,CAR_COST,HELP_KEY,fname,fmt} from '../config.js';
+import {TYPES,MAX_CARS,CAR_COST,FILMS,PARK_SLOTS,filmAppeal,HELP_KEY,fname,fmt} from '../config.js';
 import {G,newGame} from '../state.js';
 import {removeUnit} from '../build.js';
 import {addCar} from '../elevator.js';
+import {setFilm} from '../economy.js';
 
 const $=s=>document.querySelector(s);
 export function log(msg,cls){const el=document.createElement('div');el.textContent=msg;if(cls)el.className=cls;const L=$('#log');L.appendChild(el);while(L.children.length>4)L.firstChild.remove();setTimeout(()=>el.remove(),6500);}
@@ -17,6 +18,12 @@ export function openInfo(id){
 // 電梯設定：同 updInfo 分開，下拉選單先唔會俾定時更新閂咗
 function buildCfg(){
   const u=G.byId.get(G.sel),s=u&&G.cars.get(u.id),el=$('#infoCfg');
+  if(u&&u.type==='cinema'){
+    el.innerHTML=`<div class="films">${FILMS.map((f,i)=>`<button data-film="${i}">${f.name} ${fmt(f.cost)}</button>`).join('')}</div>`;
+    el.onchange=null;
+    el.onclick=e=>{const i=e.target.dataset.film;if(i==null)return;const err=setFilm(u,+i);if(err)log(err,'bad');else log(`戲院換片：${FILMS[+i].name}`,'good');};
+    return;
+  }
   if(!s){el.innerHTML='';return;}
   const opts=c=>[...s.stops].reverse().map(f=>`<option value="${f}"${f===c.cfg.home?' selected':''}>${fname(f)}</option>`).join('');
   el.innerHTML=`<div class="carList">${s.cars.map((c,i)=>`<div class="car"><b>${i+1}</b><label>待命<select data-i="${i}" aria-label="轎廂 ${i+1} 待命樓層">${opts(c)}</select></label><button data-r="${i}" aria-pressed="${c.cfg.rush}" title="早上優先向上，傍晚優先向下">繁忙</button></div>`).join('')}</div>
@@ -35,13 +42,16 @@ export function updInfo(){
   let status='運作中';
   if(['office','shop'].includes(u.type))status=u.unreach?'無法到達':u.occ?'已出租':'招租中';
   if(u.type==='condo')status=u.unreach?'無法到達':u.occ?'已售出':'待售';
-  if(u.type==='hotel')status=u.unreach?'無法到達':u.occ?'今晚有客':'空房';
+  if(d.night)status=u.unreach?'無法到達':u.occ?'今晚有客':u.dirty?'污糟，等清潔':'空房';
+  if(u.type==='parking')status=u.on?`${PARK_SLOTS} 個車位`:'未連斜路';
+  if(u.type==='cinema'){const a=filmAppeal(u,Math.floor(G.S.t/1440));status=u.unreach?'無法到達':u.film?u.film.name:'未揀片';rows.push(['吸引力',u.film?Math.round(a*100)+'%':'—']);}
   if(u.type==='food')status=u.unreach?'無法到達':'營業中';
   rows.push(['位置',rng],['狀態',status]);
   if(d.lift){const s=G.cars.get(u.id);let w=0,r=0;for(const q of s.q.values())w+=q.length;for(const c of s.cars)r+=c.riders.length;rows.push(['轎廂',`${s.cars.length} / ${MAX_CARS}`],['載客',`${r} / ${s.cap*s.cars.length}`],['候梯人數',w],['維修費',`每季 ${fmt(d.carUpkeep*s.cars.length)}`]);}
-  else if(d.pop||u.type==='food'||u.type==='shop')rows.push(['而家喺度',u.present+' 人']);
+  else if(d.pop||['food','shop','conference','cinema'].includes(u.type))rows.push(['而家喺度',u.present+' 人']);
   if(d.rent)rows.push(['租金',`每季 ${fmt(d.rent)}`]);if(d.sale)rows.push(['售價',fmt(d.sale)]);if(d.night)rows.push(['房租',`每晚 ${fmt(d.night)}`]);if(d.upkeep)rows.push(['開支',`每季 ${fmt(d.upkeep)}`]);
-  const hasSat=['office','condo','shop','hotel'].includes(u.type);const s=Math.round(u.sat);
+  if(u.noisy)rows.push(['隔籬','太嘈，評價下跌']);
+  const hasSat=['office','condo','shop','hotel','suite'].includes(u.type);const s=Math.round(u.sat);
   $('#infoBody').innerHTML=`<h3>${d.name}</h3>${rows.map(r=>`<div class="row"><span>${r[0]}</span><span>${r[1]}</span></div>`).join('')}
   ${hasSat?`<div class="row"><span>評價</span><span>${s}</span></div><div class="bar"><i style="width:${s}%;background:${s>=60?'#62d38f':s>=30?'#f0c840':'#ff6b5d'}"></i></div>`:''}`;
 }
@@ -55,7 +65,8 @@ export function showHelp(){
    <li><b>貨梯</b>專俾酒店清潔同餐廳送貨用，唔會同住客爭電梯。</li>
    <li>辦公室每季交租、住宅入住即賣出、快餐店靠午餐同訪客、酒店每晚收房租。</li>
    <li>小人顏色：黑＝正常、粉紅＝等得有啲耐、紅＝好嬲。等太耐租戶會喺季尾搬走。按「評價」睇邊度有問題。</li>
-   <li>升級條件：2★ 人口 200；3★ 人口 600＋保安室；4★ 人口 1,500＋10 間酒店房；TOWER 人口 3,000＋30F 以上天台教堂。</li>
+   <li>酒店退房後要<b>清潔房</b>執房先租得出。住宅同酒店唔好貼住辦公室或者快餐店，太嘈會扣評價。地庫<b>停車場</b>要用<b>斜路</b>由 B1 連落去。<b>戲院</b>要揀片，舊片冇人睇。</li>
+   <li>人口＝租戶＋每日訪客。住客滿意，名氣就會慢慢升，訪客越嚟越多。升級條件：2★ 人口 300；3★ 人口 1,000＋保安室；4★ 人口 5,000＋醫療中心＋回收中心＋酒店套房；5★ 人口 10,000；TOWER 5★＋天台教堂＋地鐵站。</li>
   </ul>
   <p>操作：拖曳移動畫面、滾輪或雙指縮放、右鍵拖曳都可以移動；鍵盤 <kbd>WASD</kbd> 移動、<kbd>空白鍵</kbd> 暫停、<kbd>Esc</kbd> 取消工具。進度會自動儲存喺呢部機。</p>
   <div class="acts"><button class="primary" id="mOk">開始</button></div>`;

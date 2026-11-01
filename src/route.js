@@ -16,6 +16,11 @@ export function dirty(){
     else if(u.type==='stairs'){G.adj[fi(u.f)].push({b:u.f+1,c:2.2,t:'stairs'});G.adj[fi(u.f+1)].push({b:u.f,c:2.2,t:'stairs'});}
   }
   G.rcache=new Map();
+  G.rampDepth=0;const ramps=new Set(G.S.units.filter(u=>u.type==='ramp').map(u=>u.f));while(ramps.has(-G.rampDepth-1))G.rampDepth++;
+  for(const u of G.S.units){
+    if(u.type==='parking')u.on=-u.f<=G.rampDepth;
+    if(TYPES[u.type].quiet){const o=G.occ[fi(u.f)],l=G.byId.get(o[u.x-1]),r=G.byId.get(o[u.x+u.w]);u.noisy=!!((l&&TYPES[l.type].noisy)||(r&&TYPES[r.type].noisy));}
+  }
 }
 // 候梯人多嘅電梯計貴啲，等人分散去其他電梯或者轉梯
 function congestion(id,f){const s=G.cars.get(id),q=s.q.get(f);return q?q.length/(s.cap*s.cars.length)*6:0;}

@@ -5,7 +5,7 @@ import {checkPlace,costOf} from '../build.js';
 
 export function evalTint(u,X,Y,Wd,Hd){
   const t=u.type;
-  if(G.evalView&&['office','condo','shop','hotel'].includes(t)&&(u.occ||u.unreach)){
+  if(G.evalView&&['office','condo','shop','hotel','suite'].includes(t)&&(u.occ||u.unreach)){
     const s=u.unreach?0:u.sat;R(X,Y,Wd,Hd,s>=60?'rgba(60,200,110,.45)':s>=30?'rgba(240,200,60,.5)':'rgba(230,60,50,.55)');
   }
 }

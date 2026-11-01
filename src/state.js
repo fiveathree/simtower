@@ -5,7 +5,7 @@ import {mark,paint,place} from './build.js';
 import {makeShaft} from './elevator.js';
 import {genDay} from './schedule.js';
 
-export const G={S:null,occ:null,byId:null,cars:null,skyFloors:new Set(),agents:null,events:null,evi:0,adj:null,rcache:null,lobbyCells:null,floats:null,lastDay:0,lastHour:0,hasSlab:null,
+export const G={S:null,occ:null,byId:null,cars:null,skyFloors:new Set(),agents:null,events:null,evi:0,adj:null,rcache:null,lobbyCells:null,floats:null,lastDay:0,lastHour:0,hasSlab:null,rampDepth:0,
   tool:'inspect',evalView:false,speed:1,sel:null,hover:null,drag:null,hourly:{moveIn:0,sold:0,soldAmt:0}};
 export const cam={x:480,y:-140,z:1};
 export const V={cvs:null,ctx:null,DPR:1,VW:0,VH:0};
@@ -16,7 +16,7 @@ export function R(x,y,w,h,c){V.ctx.fillStyle=c;V.ctx.fillRect(x,y,w,h);}
 export function clampCam(){cam.z=Math.min(3,Math.max(.3,cam.z));cam.x=Math.min(W*CW+300,Math.max(-300,cam.x));cam.y=Math.min((-MINF+3)*FH,Math.max(-(MAXF+3)*FH,cam.y));}
 export function floatTxt(x,f,txt,col){G.floats.push({x,f,txt,col,t:0});if(G.floats.length>60)G.floats.shift();}
 
-function blank(){return{version:SAVE_VERSION,money:2000000,t:7*60+10,stars:1,units:[],nextId:1,slab:Array.from({length:NF},()=>Array(W).fill(0)),tower:false};}
+function blank(){return{version:SAVE_VERSION,money:2000000,t:7*60+10,stars:1,units:[],nextId:1,visitors:0,vToday:0,vLog:[],rep:0,slab:Array.from({length:NF},()=>Array(W).fill(0)),tower:false};}
 export function initRuntime(){
   G.occ=Array.from({length:NF},()=>new Int32Array(W));
   G.cars=new Map();G.agents=[];G.events=[];G.evi=0;G.floats=[];
@@ -31,6 +31,7 @@ export function initRuntime(){
 const MIGRATIONS={
   1:o=>{delete o.v;return o;}, // v1 用 v 做版本欄位，資料結構不變
   2:o=>{for(const u of o.units)if(u.type==='elevator')u.cars=[{home:u.f,rush:true}];return o;}, // 電梯可以有多個轎廂
+  3:o=>{o.visitors=0;o.vToday=0;o.vLog=[];o.rep=0;return o;}, // 人口開始計訪客
 };
 export function migrate(o){
   if(!o||typeof o!=='object')return null;
