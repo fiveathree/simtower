@@ -1,5 +1,5 @@
 // 每日日程、事件佇列、模擬一步
-import {TYPES,REP_MAX,PARK_SLOTS,CONF_FEE,filmAppeal,rentOf,fmt,rnd} from './config.js';
+import {TYPES,SITE,REP_MAX,PARK_SLOTS,CONF_FEE,filmAppeal,rentOf,fmt,rnd} from './config.js';
 import {G,earn,floatTxt,hooks,save} from './state.js';
 import {dailyEvents,eventHandle,isXmas} from './events.js';
 import {route,reach,lobbyX} from './route.js';
@@ -35,9 +35,9 @@ export function genDay(d,from){
   const ratio=guests?Math.min(1,slots/guests):0;G.parkOk=ratio>=1;
   if(ratio)for(const u of G.S.units)if(TYPES[u.type].quiet)u.sat=Math.min(100,u.sat+3*ratio);
   if(foods+shops>0){
-    const m=G.S.units.find(u=>u.type==='metro'&&route(u.f+u.h-1,0)),fame=.15+.85*G.S.rep/REP_MAX,extra=m?(wk?4000:6500)*fame:0;
+    const m=G.S.units.find(u=>u.type==='metro'&&route(u.f+u.h-1,0)),fame=.15+.85*G.S.rep/REP_MAX,extra=m?(wk?4000:6500)*fame*SITE.metro:0;
     const base2=(tenants()*.08+shops*70+foods*80)*(wk?1:1.5)*fame*(isXmas(d)?1.5:1);
-    const n=Math.min(shops*160+foods*180,Math.round(base2+extra));
+    const n=Math.min((shops*160+foods*180)*(SITE.cap||1),Math.round(base2+extra));
     for(let i=0;i<n;i++)ev(base+rnd(660,1200),'visit',m&&Math.random()<extra/(base2+extra)?m.id:0);
   }
 }

@@ -1,5 +1,5 @@
 // 收入、支出、季度結算、升星
-import {TYPES,REQ,FILMS,REP_MAX,TOWER_STAR,AD_PER_FLOOR,rentOf,fmt} from './config.js';
+import {TYPES,reqOf,SITE,FILMS,REP_MAX,TOWER_STAR,AD_PER_FLOOR,rentOf,fmt} from './config.js';
 import {G,earn,floatTxt,hooks,save} from './state.js';
 import {reach} from './route.js';
 
@@ -45,7 +45,7 @@ export function quarterEnd(){
   let rent=0,up=0,ops=0,ad=0,left=0;
   for(const u of G.S.units){
     const d=TYPES[u.type];
-    if(u.occ&&d.rent)rent+=d.rent*rentOf(u).mul;
+    if(u.occ&&d.rent)rent+=d.rent*rentOf(u).mul*SITE.rent;
     if(d.roof)ad+=20000+u.f*AD_PER_FLOOR;
     if(d.carUpkeep)up+=d.carUpkeep*u.cars.length;
     if(d.upkeep)ops+=d.upkeep;
@@ -70,7 +70,7 @@ export function reasons(u){
   return a;
 }
 export function checkStars(){
-  const nx=G.S.stars+1,r=REQ[nx];if(!r||G.S.starHold>G.S.t/1440)return;
+  const nx=G.S.stars+1,r=reqOf(nx);if(!r||G.S.starHold>G.S.t/1440)return;
   if(pop()>=r.pop&&(r.need||[]).every(t=>count(t))){
     G.S.stars=nx;hooks.log(nx===TOWER_STAR?'恭喜！大廈評為 TOWER 級':`大廈升到 ${nx}★，解鎖新設施`,'good');hooks.buildTools();save();
   }

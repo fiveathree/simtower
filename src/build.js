@@ -1,5 +1,5 @@
 // 放置規則、承托、拆卸、費用
-import {TYPES,MINF,MAXF,W,SKY_FLOORS,fi,fmt,fname} from './config.js';
+import {TYPES,MINF,MAXF,W,SKY_FLOORS,SITE,fi,fmt,fname} from './config.js';
 import {G,earn,floatTxt,hooks} from './state.js';
 import {dirty} from './route.js';
 import {makeShaft,stopsOf} from './elevator.js';
@@ -8,6 +8,7 @@ export function mark(u,val){for(let f=u.f;f<u.f+u.h;f++){const o=G.occ[fi(f)],s=
 export function costOf(type,h){const d=TYPES[type];return d.lift?d.cost+d.per*h:d.cost;}
 export function checkPlace(type,f,x,h){
   const d=TYPES[type];h=h||d.h||1;
+  if(SITE.ban.includes(type))return `${SITE.name}冇得起${d.name}`;
   if(d.star>G.S.stars)return `要 ${d.star}★ 先解鎖`;
   if(x<0||x+d.w>W)return '超出地盤範圍';
   if(f<MINF||f+h-1>MAXF)return '超出可建高度';
@@ -40,7 +41,7 @@ export function paint(type,f,x,free){
   const s=G.S.slab[fi(f)];
   if(type==='lobby'||type==='skylobby'){
     const sky=type==='skylobby';
-    if(sky?!SKY_FLOORS.includes(f):f!==0)return sky?'空中大堂只可以起喺 16F、31F、46F':'大堂只可以起喺 1F';
+    if(sky?!SKY_FLOORS.includes(f):f!==0)return sky?`空中大堂只可以起喺 ${SKY_FLOORS.map(fname).join('、')}`:'大堂只可以起喺 1F';
     if(s[x]===2)return 'skip';if(G.occ[fi(f)][x])return '位置已被佔用';
     if(sky&&!s[x]&&!G.S.slab[fi(f-1)][x])return '下面要有樓面承托';
     if(!free){if(G.S.money<1000)return '資金不足';earn('build',-1000);}

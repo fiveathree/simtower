@@ -1,6 +1,6 @@
 // 資訊面板、訊息、對話框
-import {TYPES,MAX_CARS,CAR_COST,FILMS,PARK_SLOTS,LEDGER,RENT,rentOf,tenantName,filmAppeal,HELP_KEY,fname,fmt} from '../config.js';
-import {G,cam,clampCam,newGame} from '../state.js';
+import {TYPES,SITES,SLOTS,MAX_CARS,CAR_COST,FILMS,PARK_SLOTS,LEDGER,RENT,rentOf,tenantName,filmAppeal,HELP_KEY,fname,fmt} from '../config.js';
+import {G,cam,clampCam,newGame,enter,load,save,useSlot,deleteSlot} from '../state.js';
 import {removeUnit} from '../build.js';
 import {addCar} from '../elevator.js';
 import {setFilm,setRent,reasons} from '../economy.js';
@@ -75,19 +75,47 @@ export function showHelp(){
    <li>辦公室每季交租、住宅入住即賣出、快餐店靠午餐同訪客、酒店每晚收房租。</li>
    <li>小人顏色：黑＝正常、粉紅＝等得有啲耐、紅＝好嬲。等太耐租戶會喺季尾搬走。按「評價」睇邊度有問題。</li>
    <li>酒店退房後要<b>清潔房</b>執房先租得出。住宅同酒店唔好貼住辦公室或者快餐店，太嘈會扣評價。地庫<b>停車場</b>要用<b>斜路</b>由 B1 連落去。<b>戲院</b>要揀片，舊片冇人睇。</li>
-   <li>人口＝租戶＋每日訪客。住客滿意，名氣就會慢慢升，訪客越嚟越多。升級條件：2★ 人口 300；3★ 人口 1,000＋保安室；4★ 人口 5,000＋醫療中心＋回收中心＋酒店套房；5★ 人口 10,000；TOWER 5★＋天台教堂＋地鐵站。</li>
+   <li>人口＝租戶＋每日訪客。住客滿意，名氣就會慢慢升，訪客越嚟越多。升級條件：2★ 人口 300；3★ 人口 1,000＋保安室；4★ 人口 5,000＋醫療中心＋回收中心＋酒店套房；5★ 人口 10,000（高雄低四成半、香港高 5%）；TOWER 5★＋天台教堂＋地鐵站。</li>
   </ul>
   <p>操作：拖曳移動畫面、滾輪或雙指縮放、右鍵拖曳都可以移動；鍵盤 <kbd>WASD</kbd> 移動、<kbd>空白鍵</kbd> 暫停、<kbd>Esc</kbd> 取消工具。進度會自動儲存喺呢部機。</p>
   <div class="acts"><button class="primary" id="mOk">開始</button></div>`;
   $('#modal').hidden=false;$('#mOk').onclick=()=>{$('#modal').hidden=true;try{localStorage.setItem(HELP_KEY,'1');}catch(e){}};$('#mOk').focus();
 }
-export function askNew(){
-  $('#mcard').innerHTML=`<h2>開新遊戲？</h2><p>目前嘅大廈會被清除，重新由起步樓宇開始。</p>
-  <div class="acts"><button id="mNo">取消</button><button class="primary" id="mYes">開新遊戲</button></div>`;
-  $('#modal').hidden=false;$('#mNo').onclick=()=>$('#modal').hidden=true;
-  $('#mYes').onclick=()=>{$('#modal').hidden=true;newGame();log('新遊戲開始','good');};
+export function askNew(){showSites(false);}
+// 揀地點：first 係第一次玩，唔可以取消
+export function showSites(first,then){
+  const ids=['kaohsiung','hongkong','tokyo'];
+  $('#mcard').innerHTML=`<h2>揀 <span>地點</span></h2>${first?'':`<p>會喺第 ${G.slot} 格重新開始，呢格目前嘅大廈會被清除。</p>`}
+  <div class="sites">${ids.map(id=>{const s=SITES[id];return `<button data-site="${id}"><b>${s.name}</b><em>${s.diff}</em><small>${s.desc}</small><small>起始資金 ${fmt(s.money)}</small></button>`;}).join('')}</div>
+  ${first?'':'<div class="acts"><button id="mNo">取消</button></div>'}`;
+  $('#modal').hidden=false;
+  if(!first)$('#mNo').onclick=()=>{$('#modal').hidden=true;};
+  $('#mcard').querySelectorAll('[data-site]').forEach(b=>b.onclick=()=>{$('#modal').hidden=true;newGame(b.dataset.site);log(`${SITES[b.dataset.site].name}開工！`,'good');then&&then();});
 }
-export function initPanels(){$('#helpBtn').onclick=showHelp;$('#newBtn').onclick=askNew;$('#finBtn').onclick=showFinance;}
+function slotLine(n){
+  const o=load(n);if(!o)return '空';
+  const d=Math.floor(o.t/1440);
+  return `${SITES[o.site].name}・${o.stars>=6?'TOWER':o.stars+'★'}・第${Math.floor(d/12)+1}年・${fmt(o.money)}`;
+}
+export function showSlots(){
+  save();
+  const rows=[];for(let n=1;n<=SLOTS;n++){const has=!!load(n);rows.push(`<div class="slot"><div><b>第 ${n} 格${n===G.slot?'（玩緊）':''}</b><small>${slotLine(n)}</small></div>
+    <button data-open="${n}"${n===G.slot?' disabled':''}>${has?'讀取':'開新'}</button><button data-del="${n}"${has?'':' disabled'} class="danger">刪除</button></div>`);}
+  $('#mcard').innerHTML=`<h2>存檔 <span>三格</span></h2><p>進度自動儲存喺而家玩緊嗰格。</p>${rows.join('')}<div class="acts"><button class="primary" id="mOk">關閉</button></div>`;
+  $('#modal').hidden=false;$('#mOk').onclick=()=>{$('#modal').hidden=true;};
+  $('#mcard').querySelectorAll('[data-open]').forEach(b=>b.onclick=()=>{
+    const n=+b.dataset.open,o=load(n);useSlot(n);
+    if(o){enter(o);$('#modal').hidden=true;log(`讀取第 ${n} 格`,'good');}else showSites(true);
+  });
+  $('#mcard').querySelectorAll('[data-del]').forEach(b=>b.onclick=()=>{
+    const n=+b.dataset.del;
+    ask('刪除存檔？',`第 ${n} 格（${slotLine(n)}）會永久刪除。`,[
+      {label:'取消',fn:showSlots},
+      {label:'刪除',primary:true,fn:()=>{deleteSlot(n);if(n===G.slot)showSites(true);else showSlots();}},
+    ]);
+  });
+}
+export function initPanels(){$('#helpBtn').onclick=showHelp;$('#newBtn').onclick=askNew;$('#finBtn').onclick=showFinance;$('#slotBtn').onclick=showSlots;}
 // 遊戲內對話框：開住時模擬會暫停
 export function ask(title,body,btns){
   $('#mcard').innerHTML=`<h2>${title}</h2><p>${body}</p><div class="acts">${btns.map((b,i)=>`<button data-b="${i}"${b.primary?' class="primary"':''}${b.disabled?' disabled':''}>${b.label}</button>`).join('')}</div>`;
@@ -116,4 +144,4 @@ export function showFinance(){
   <div class="acts"><button class="primary" id="mOk">關閉</button></div>`;
   $('#modal').hidden=false;$('#mOk').onclick=()=>{$('#modal').hidden=true;};
 }
-export function firstRunHelp(){let seen=false;try{seen=!!localStorage.getItem(HELP_KEY);}catch(e){}if(!seen)showHelp();}
+export function firstRunHelp(then){let seen=false;try{seen=!!localStorage.getItem(HELP_KEY);}catch(e){}if(seen)then&&then();else{showHelp();const ok=$('#mOk').onclick;$('#mOk').onclick=()=>{ok();then&&then();};}}

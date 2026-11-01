@@ -16,6 +16,7 @@ button{font:inherit;color:inherit}
 #top{grid-column:1/-1;display:flex;flex-wrap:wrap;align-items:center;gap:8px 14px;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:6px 10px}
 .brand{display:flex;align-items:baseline;gap:10px}
 .brand b{font-weight:900;font-size:18px;letter-spacing:.06em}
+.brand small{color:var(--brass);font-size:12px}
 #stars{color:var(--led);letter-spacing:.12em;font-size:15px}
 .led{display:flex;flex-direction:column;background:var(--ledbg);border:1px solid #3a2a10;border-radius:6px;padding:2px 9px;min-width:92px}
 .led small{font-size:10px;color:#a07a3c;letter-spacing:.12em}
@@ -65,6 +66,17 @@ button:focus-visible{outline:2px solid var(--led);outline-offset:1px}
 #infoCfg button[aria-pressed=true]{border-color:var(--go);color:var(--go)}
 #infoCfg button:disabled{opacity:.45;cursor:default}
 #addCar{width:100%;margin-top:6px}
+.sites{display:grid;gap:8px;margin-top:8px}
+.sites button{display:grid;grid-template-columns:auto 1fr;gap:2px 10px;text-align:left;background:var(--panel2);border:1px solid var(--line);border-radius:8px;padding:9px 12px;cursor:pointer}
+.sites button:hover{border-color:var(--brass)}
+.sites b{font-size:17px;font-weight:900}
+.sites em{font-style:normal;color:var(--led);align-self:center}
+.sites small{grid-column:1/-1;color:var(--dim);font-size:12px}
+.slot{display:grid;grid-template-columns:1fr auto auto;gap:6px;align-items:center;padding:7px 0;border-bottom:1px solid #2a3036}
+.slot small{display:block;color:var(--dim);font-size:12px}
+.slot button{background:var(--panel2);border:1px solid var(--line);border-radius:6px;padding:5px 10px;cursor:pointer}
+.slot button.danger{border-color:#6b2f2a;color:var(--bad)}
+.slot button:disabled{opacity:.45;cursor:default}
 .rentRow{display:grid;grid-template-columns:auto 1fr 1fr 1fr;gap:4px;align-items:center;color:var(--dim)}
 #alert{position:absolute;left:50%;top:10px;transform:translateX(-50%);display:flex;align-items:center;gap:10px;background:#3a1512f2;border:1px solid var(--bad);border-radius:8px;padding:5px 8px 5px 12px;max-width:calc(100% - 20px);box-sizing:border-box;z-index:2}
 #alert button{background:var(--panel2);border:1px solid var(--line);border-radius:6px;padding:4px 10px;cursor:pointer;flex:none}
